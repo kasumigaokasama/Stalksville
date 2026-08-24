@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Stalksville.Infrastructure.Wolvesville;
@@ -10,6 +11,14 @@ internal sealed class PlayerProfileDto
 {
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
+
+    /// <summary>Clan member payloads identify the player as "playerId" instead of "id".</summary>
+    [JsonPropertyName("playerId")]
+    public string? PlayerId { get; set; }
+
+    /// <summary>Clan member presence field; full profiles call this "status".</summary>
+    [JsonPropertyName("playerStatus")]
+    public string? PlayerStatus { get; set; }
 
     [JsonPropertyName("username")]
     public string Username { get; set; } = string.Empty;
@@ -29,23 +38,22 @@ internal sealed class PlayerProfileDto
     [JsonPropertyName("clanId")]
     public string? ClanId { get; set; }
 
-    [JsonPropertyName("wins")]
-    public int? Wins { get; set; }
+    // Spec Player: ranked data is top-level (there is no rankedStats object).
+    [JsonPropertyName("rankedSeasonSkill")]
+    public int? RankedSeasonSkill { get; set; }
 
-    [JsonPropertyName("losses")]
-    public int? Losses { get; set; }
+    [JsonPropertyName("rankedSeasonPlayedCount")]
+    public int? RankedSeasonPlayedCount { get; set; }
 
-    [JsonPropertyName("gamesPlayed")]
-    public int? GamesPlayed { get; set; }
+    // Spec Player: the icon is a top-level id, not a nested object.
+    [JsonPropertyName("profileIconId")]
+    public string? ProfileIconId { get; set; }
 
     [JsonPropertyName("receivedRosesCount")]
     public int? ReceivedRosesCount { get; set; }
 
     [JsonPropertyName("sentRosesCount")]
     public int? SentRosesCount { get; set; }
-
-    [JsonPropertyName("profileIcon")]
-    public ProfileIconDto? ProfileIcon { get; set; }
 
     [JsonPropertyName("equippedAvatar")]
     public AvatarDto? EquippedAvatar { get; set; }
@@ -56,26 +64,11 @@ internal sealed class PlayerProfileDto
     [JsonPropertyName("roleCards")]
     public List<RoleCardDto>? RoleCards { get; set; }
 
-    [JsonPropertyName("rankedStats")]
-    public RankedStatsDto? RankedStats { get; set; }
-
     [JsonPropertyName("gameStats")]
     public GameStatsDto? GameStats { get; set; }
 
     [JsonPropertyName("friendIds")]
     public List<string>? FriendIds { get; set; }
-}
-
-internal sealed class ProfileIconDto
-{
-    [JsonPropertyName("id")]
-    public string Id { get; set; } = string.Empty;
-
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
-
-    [JsonPropertyName("rarity")]
-    public string? Rarity { get; set; }
 }
 
 internal sealed class AvatarDto
@@ -89,41 +82,26 @@ internal sealed class AvatarDto
 
 internal sealed class RoleCardDto
 {
-    [JsonPropertyName("roleId")]
-    public string RoleId { get; set; } = string.Empty;
+    [JsonPropertyName("roleId1")]
+    public string? RoleId1 { get; set; }
 }
 
-internal sealed class RankedStatsDto
-{
-    [JsonPropertyName("seasonNumber")]
-    public int? SeasonNumber { get; set; }
-
-    [JsonPropertyName("wins")]
-    public int? Wins { get; set; }
-
-    [JsonPropertyName("losses")]
-    public int? Losses { get; set; }
-
-    [JsonPropertyName("currentRating")]
-    public int? CurrentRating { get; set; }
-
-    [JsonPropertyName("placementRating")]
-    public int? PlacementRating { get; set; }
-}
-
+/// <summary>Spec PlayerGameStats: per-outcome win/lose counters plus a role-achievement array.</summary>
 internal sealed class GameStatsDto
 {
-    [JsonPropertyName("wins")]
-    public int? Wins { get; set; }
+    [JsonPropertyName("totalWinCount")]
+    public int? TotalWinCount { get; set; }
 
-    [JsonPropertyName("losses")]
-    public int? Losses { get; set; }
+    [JsonPropertyName("totalLoseCount")]
+    public int? TotalLoseCount { get; set; }
+
+    [JsonPropertyName("totalTieCount")]
+    public int? TotalTieCount { get; set; }
 
     [JsonPropertyName("achievements")]
-    public int? Achievements { get; set; }
+    public List<JsonElement>? Achievements { get; set; }
 
-    [JsonPropertyName("gamesPlayed")]
-    public int? GamesPlayed { get; set; }
+    public int GamesPlayedTotal => (TotalWinCount ?? 0) + (TotalLoseCount ?? 0) + (TotalTieCount ?? 0);
 }
 
 /// <summary>Clan payload returned by /clans/search and /clans/{clanId}/info.</summary>

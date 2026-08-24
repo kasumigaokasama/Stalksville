@@ -128,6 +128,17 @@ public sealed class PlayerPipelineTests : IAsyncLifetime
         var members = body.RootElement.GetProperty("knownMembers").EnumerateArray().ToList();
         Assert.Contains(members, m => m.GetProperty("username").GetString() == "flex");
         Assert.Contains(members, m => m.GetProperty("username").GetString() == "talon");
+
+        // Regression for live-API member imports: members arrive as ClanMember objects keyed by
+        // "playerId" — every member must land in its own tracked player row, never merge into one.
+        var tracked = await GetJsonAsync("/api/v1/players");
+        var trackedList = tracked.EnumerateArray().ToList();
+        Assert.Contains(trackedList, p => p.GetProperty("wolvesvillePlayerId").GetString() == "3001"
+            && p.GetProperty("username").GetString() == "flex");
+        Assert.Contains(trackedList, p => p.GetProperty("wolvesvillePlayerId").GetString() == "3002"
+            && p.GetProperty("username").GetString() == "talon");
+        Assert.Equal(2, trackedList.Select(p => p.GetProperty("id").GetString()).Distinct().Count());
+        Assert.All(trackedList, p => Assert.False(string.IsNullOrEmpty(p.GetProperty("wolvesvillePlayerId").GetString())));
     }
 
     [Fact]

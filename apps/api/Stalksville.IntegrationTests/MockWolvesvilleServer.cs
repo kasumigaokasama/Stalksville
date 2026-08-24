@@ -63,7 +63,7 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
     {
         _app.MapGet("/roles", (HttpRequest request) => Authorize(request) is { } failed ? failed : Results.Ok(Array.Empty<object>()));
 
-        _app.MapGet("/players/username/{username}", (string username, HttpRequest request) =>
+        _app.MapGet("/players/search", (HttpRequest request, string username) =>
             Handle(request, () => _playersByUsername.TryGetValue(username, out var player)
                 ? Results.Json(PlayerPayload(player))
                 : Results.NotFound(Error($"No player with username {username}"))));
@@ -89,7 +89,8 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
 
         _app.MapGet("/clans/{clanId}/members", (string clanId, HttpRequest request) =>
             Handle(request, () => _clans.TryGetValue(clanId, out var clan)
-                ? Results.Json(clan.MemberIds.Where(_playersById.ContainsKey).Select(id => PlayerPayload(_playersById[id])).ToList())
+                // Spec shape: clan members are ClanMember objects keyed by "playerId", not full profiles.
+                ? Results.Json(clan.MemberIds.Where(_playersById.ContainsKey).Select(id => MemberPayload(_playersById[id])).ToList())
                 : Results.NotFound(Error($"No clan with id {clanId}"))));
 
         // ---- test-only control endpoints (no auth; never mirrored from the real API) ----
@@ -189,18 +190,37 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
         status = "ONLINE",
         lastOnline = "2026-01-01T00:00:00Z", // static: identical re-fetches must produce identical hashes
         clanId = player.ClanId,
-        wins = player.Wins,
-        losses = 200,
-        gamesPlayed = player.Wins + 200,
+        rankedSeasonSkill = 1500,
+        rankedSeasonPlayedCount = 18,
         receivedRosesCount = 3,
         sentRosesCount = 1,
-        profileIcon = new { id = "icon_default", name = "Default", rarity = "COMMON" },
+        profileIconId = "icon_default",
         equippedAvatar = new { id = $"avatar_{player.Id}", name = "Base" },
         badgeIds = player.BadgeIds,
-        roleCards = new[] { new { roleId = "role_seer" } },
-        rankedStats = new { seasonNumber = 21, wins = 10, losses = 8, currentRating = 1500, placementRating = 1400 },
-        gameStats = new { wins = player.Wins, losses = 200, achievements = 9, gamesPlayed = player.Wins + 200 },
+        roleCards = new[] { new { roleId1 = "role_seer", rarity = "COMMON" } },
+        gameStats = new
+        {
+            totalWinCount = player.Wins,
+            totalLoseCount = 200,
+            totalTieCount = 0,
+            achievements = new[] { new { roleId = "role_seer", level = 4, points = 85, pointsNextLevel = 100, category = "EASY" } }
+        },
         friendIds = Array.Empty<string>()
+    };
+
+    /// <summary>ClanMember payload per spec: "playerId", membership "status", "playerStatus" for presence.</summary>
+    private static object MemberPayload(PlayerFixture player) => new
+    {
+        playerId = player.Id,
+        creationTime = "2020-01-01T00:00:00Z",
+        xp = 1000L,
+        status = "ACCEPTED",
+        isCoLeader = false,
+        username = player.Username,
+        level = player.Level,
+        lastOnline = "2026-01-01T00:00:00Z",
+        profileIconId = "icon_default",
+        playerStatus = "DEFAULT"
     };
 
     private static object ClanPayload(ClanFixture clan) => new

@@ -16,6 +16,13 @@ public sealed class PlayerStore(StalksvilleDbContext db) : IPlayerStore
 
     public async Task<(Player Player, bool Created)> UpsertPlayerAsync(NormalizedPlayerState state, DateTimeOffset observedAt, CancellationToken cancellationToken = default)
     {
+        // An empty Wolvesville id must never match or create a row: it would fuse every
+        // unidentified observation into one player (observed with live clan-member imports).
+        if (string.IsNullOrWhiteSpace(state.WolvesvillePlayerId))
+        {
+            throw new InvalidOperationException("Cannot upsert a player observation without a Wolvesville player id.");
+        }
+
         var player = await db.Players.FirstOrDefaultAsync(p => p.WolvesvillePlayerId == state.WolvesvillePlayerId, cancellationToken);
         bool created;
 

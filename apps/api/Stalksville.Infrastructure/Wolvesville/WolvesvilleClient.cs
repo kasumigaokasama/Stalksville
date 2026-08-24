@@ -30,8 +30,9 @@ public sealed class WolvesvilleClient(
 
     public async Task<PlayerObservation> GetPlayerByUsernameAsync(string username, bool bypassCache = false, CancellationToken cancellationToken = default)
     {
+        // Spec: GET /players/search?username={username} returns the exact-match Player profile.
         var observation = await GetPlayerAsync(
-            $"players/username/{Uri.EscapeDataString(username)}",
+            $"players/search?username={Uri.EscapeDataString(username)}",
             $"{CachePolicy.PlayerByKeyPrefix}username:{username.ToLowerInvariant()}",
             bypassCache,
             cancellationToken);
@@ -93,7 +94,13 @@ public sealed class WolvesvilleClient(
         }
 
         var members = await GetListAsync<PlayerProfileDto>($"clans/{Uri.EscapeDataString(wolvesvilleClanId)}/members", cancellationToken);
-        var result = members.Select(ToObservation).ToList();
+        // ClanMember payloads have no clanId field: appearing in this response IS the membership
+        // observation, so the clan context is injected here with the endpoint as evidence.
+        var result = members.Select(m =>
+        {
+            var obs = ToObservation(m, source: "wolvesville:GET /clans/{clanId}/members");
+            return obs with { State = obs.State with { ClanWolvesvilleId = obs.State.ClanWolvesvilleId ?? wolvesvilleClanId } };
+        }).ToList();
         await cache.SetAsync(key, result, CachePolicy.ClanTtl, cancellationToken);
         return result;
     }
@@ -154,40 +161,34 @@ public sealed class WolvesvilleClient(
             ?? throw new WolvesvilleApiException(500, $"Wolvesville returned an unparseable payload for GET /{path}.");
     }
 
-    private static PlayerObservation ToObservation(PlayerProfileDto dto) =>
-        ToObservation(dto, JsonSerializer.Serialize(dto, ResponseJson));
-
-    private static PlayerObservation ToObservation(PlayerProfileDto dto, string rawJson)
+    private static PlayerObservation ToObservation(PlayerProfileDto dto, string? rawJson = null, string? source = null)
     {
         var state = new NormalizedPlayerState
         {
-            WolvesvillePlayerId = dto.Id,
+            // Full profiles use "id"; clan member payloads use "playerId" (see API spec ClanMember).
+            WolvesvillePlayerId = dto.PlayerId ?? dto.Id,
             Username = dto.Username,
             PersonalMessage = dto.PersonalMessage,
             Level = dto.Level,
-            Status = dto.Status,
+            // In clan member payloads "status" is the membership status; presence is "playerStatus".
+            Status = dto.PlayerId is null ? dto.Status : dto.PlayerStatus ?? dto.Status,
             LastOnline = dto.LastOnline,
             ClanWolvesvilleId = dto.ClanId,
-            Wins = dto.Wins ?? dto.GameStats?.Wins ?? 0,
-            Losses = dto.Losses ?? dto.GameStats?.Losses ?? 0,
-            GamesPlayed = dto.GamesPlayed ?? dto.GameStats?.GamesPlayed ?? 0,
+            Wins = dto.GameStats?.TotalWinCount ?? 0,
+            Losses = dto.GameStats?.TotalLoseCount ?? 0,
+            GamesPlayed = dto.GameStats?.GamesPlayedTotal ?? 0,
             ReceivedRosesCount = dto.ReceivedRosesCount,
             SentRosesCount = dto.SentRosesCount,
-            ProfileIconId = dto.ProfileIcon?.Id,
-            ProfileIconName = dto.ProfileIcon?.Name,
+            ProfileIconId = dto.ProfileIconId,
             EquippedAvatarId = dto.EquippedAvatar?.Id,
             BadgeIds = dto.BadgeIds ?? [],
-            RoleCardIds = dto.RoleCards?.Select(r => r.RoleId).ToList() ?? [],
-            RankedSeason = dto.RankedStats?.SeasonNumber,
-            RankedWins = dto.RankedStats?.Wins,
-            RankedLosses = dto.RankedStats?.Losses,
-            RankedCurrentRating = dto.RankedStats?.CurrentRating,
-            RankedPlacementRating = dto.RankedStats?.PlacementRating,
-            Achievements = dto.GameStats?.Achievements,
+            RoleCardIds = dto.RoleCards?.Select(r => r.RoleId1).Where(id => id is not null).ToList() ?? [],
+            RankedCurrentRating = dto.RankedSeasonSkill,
+            Achievements = dto.GameStats?.Achievements?.Count,
             FriendCount = dto.FriendIds?.Count ?? 0
         };
 
-        return new PlayerObservation(rawJson, state, "wolvesville:GET /players/{playerId}");
+        return new PlayerObservation(rawJson ?? JsonSerializer.Serialize(dto, ResponseJson), state, source ?? "wolvesville:GET /players/{playerId}");
     }
 
     private static ObservedClan ToObservedClan(ClanDto clan) => new(
