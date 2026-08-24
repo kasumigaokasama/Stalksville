@@ -1,0 +1,59 @@
+.note {
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--stl-success);
+}
+
+.search-row {
+  display: flex;
+  gap: 10px;
+
+  input {
+    flex: 1;
+  }
+}
+
+.feedback {
+  margin-top: 10px;
+  font-size: 12px;
+
+  &.err {
+    color: var(--stl-danger);
+  }
+}
+
+.search-row + table,
+.feedback + table {
+  margin-top: 12px;
+}
+
+.clan-name {
+  font-weight: 600;
+}
+
+section + section {
+  margin-top: 16px;
+}
+
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+
+  h2 {
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .list-search {
+    width: 220px;
+  }
+}
+
+.muted {
+  color: var(--stl-text-muted);
+}

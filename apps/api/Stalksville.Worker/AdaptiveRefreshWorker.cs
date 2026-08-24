@@ -1,0 +1,115 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Stalksville.Application.Abstractions;
+using Stalksville.Application.Advanced;
+using Stalksville.Application.Players;
+using Stalksville.Infrastructure.Seeding;
+
+namespace Stalksville.Worker;
+
+/// <summary>
+/// Background adaptive refresh (master plan §27): every interval, the least recently observed
+/// tracked players are re-fetched through the full player pipeline (snapshot → changes →
+/// memberships). In mock mode this makes the demo dataset evolve on its own.
+/// </summary>
+public sealed class AdaptiveRefreshWorker(
+    IServiceProvider services,
+    ILogger<AdaptiveRefreshWorker> logger) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        var intervalMinutes = Math.Max(1, services.GetRequiredService<IConfiguration>().GetValue("Worker:IntervalMinutes", 15));
+        var enabled = services.GetRequiredService<IConfiguration>().GetValue("Worker:Enabled", true);
+
+        if (!enabled)
+        {
+            logger.LogInformation("Adaptive refresh worker disabled (Worker:Enabled=false)");
+            return;
+        }
+
+        // Apply migrations + seed once so the worker can boot standalone.
+        using (var bootScope = services.CreateScope())
+        {
+            await bootScope.ServiceProvider.GetRequiredService<StalksvilleSeeder>().SeedAsync(stoppingToken);
+        }
+
+        logger.LogInformation("Adaptive refresh worker started: interval {Interval}m, max {Max} player(s)/run",
+            intervalMinutes,
+            services.GetRequiredService<IConfiguration>().GetValue("Worker:MaxPerRun", 5));
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await RunCycleAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Refresh cycle failed; retrying next interval");
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+
+        logger.LogInformation("Adaptive refresh worker stopped");
+    }
+
+    private async Task RunCycleAsync(CancellationToken cancellationToken)
+    {
+        using var scope = services.CreateScope();
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var players = scope.ServiceProvider.GetRequiredService<IPlayerStore>();
+        var playerService = scope.ServiceProvider.GetRequiredService<PlayerService>();
+
+        var maxPerRun = Math.Max(1, configuration.GetValue("Worker:MaxPerRun", 5));
+        var minInterval = Math.Max(5, configuration.GetValue("Worker:MinPlayerIntervalMinutes", 60));
+
+        var recent = await players.GetRecentAsync(1000, cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+
+        var plan = RefreshScheduler.Plan(
+            recent.Select(p => new RefreshCandidate(p.Id, p.WolvesvillePlayerId, p.Username, p.LastSeenAt)).ToList(),
+            now,
+            maxPerRun,
+            minInterval);
+
+        if (plan.Selected.Count == 0)
+        {
+            logger.LogDebug("No players due for refresh ({Skipped} too recent)", plan.SkippedTooRecent);
+            return;
+        }
+
+        logger.LogInformation("Refreshing {Count} player(s): {Names} ({SkippedRecent} too recent, {SkippedLimit} over limit)",
+            plan.Selected.Count,
+            string.Join(", ", plan.Selected.Select(c => c.Username)),
+            plan.SkippedTooRecent,
+            plan.SkippedByLimit);
+
+        foreach (var candidate in plan.Selected)
+        {
+            try
+            {
+                var result = await playerService.RefreshAsync(candidate.PlayerId, cancellationToken);
+                logger.LogInformation("Refreshed {Username}: reobserved={Reobserved}, changes={Changes}",
+                    candidate.Username, result.WasReobserved, result.ChangesDetectedInThisObservation);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to refresh {Username}; continuing", candidate.Username);
+            }
+        }
+    }
+}

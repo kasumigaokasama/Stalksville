@@ -1,0 +1,73 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Players</h1>
+      <div class="stl-subtitle">Exact username lookup imports a player and takes the first snapshot.</div>
+    </div>
+  </div>
+
+  @if (auth.canWrite()) {
+  <section class="stl-card lookup-card">
+    <div class="lookup-row">
+      <input
+        class="stl-input"
+        type="text"
+        placeholder="Exact Wolvesville username, e.g. shadowfox"
+        [value]="lookupName()"
+        (input)="lookupName.set($any($event.target).value)"
+        (keydown.enter)="lookup()"
+      />
+      <button class="stl-button stl-button--primary" type="button" (click)="lookup()" [disabled]="lookupBusy() || !lookupName().trim()">
+        {{ lookupBusy() ? 'Looking up…' : 'Look up & import' }}
+      </button>
+    </div>
+    @if (lookupNote(); as note) {
+      <div class="lookup-feedback ok">{{ note }}</div>
+    }
+    @if (lookupError(); as err) {
+      <div class="lookup-feedback err">{{ err }}</div>
+    }
+  </section>
+  }
+
+  <section class="stl-card">
+    <div class="list-head">
+      <h2>Tracked players <span class="stl-tag stl-tag--observed">observed</span></h2>
+      <input
+        class="stl-input list-search"
+        type="search"
+        placeholder="Filter tracked…"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+      />
+    </div>
+
+    @if (isLoading()) {
+      <div class="stl-empty">Loading…</div>
+    } @else if (players().length === 0) {
+      <div class="stl-empty">No tracked players yet — look one up above.</div>
+    } @else {
+      <table class="stl-table">
+        <thead>
+          <tr><th>Player</th><th>Wolvesville ID</th><th>Clan</th><th>Last seen</th></tr>
+        </thead>
+        <tbody>
+          @for (player of players(); track player.id) {
+            <tr>
+              <td><a [routerLink]="['/players', player.id]">{{ player.username }}</a></td>
+              <td class="mono muted">{{ player.wolvesvillePlayerId }}</td>
+              <td class="muted">
+                @if (player.currentClanId; as clanId) {
+                  <a [routerLink]="['/clans', clanId]">{{ player.currentClanName ?? 'clan not imported' }}</a>
+                } @else {
+                  —
+                }
+              </td>
+              <td class="muted">{{ formatRelative(player.lastSeenAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</div>

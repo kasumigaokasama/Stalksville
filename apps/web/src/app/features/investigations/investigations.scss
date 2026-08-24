@@ -1,0 +1,57 @@
+.archived-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--stl-text-muted);
+  cursor: pointer;
+}
+
+.create-card {
+  margin-bottom: 16px;
+
+  h2 {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .create-form {
+    display: grid;
+    grid-template-columns: 1.2fr 1.8fr auto;
+    gap: 12px;
+    align-items: end;
+
+    @media (max-width: 800px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--stl-text-muted);
+
+    .optional {
+      font-weight: 400;
+      color: var(--stl-text-faint);
+    }
+
+    .error {
+      color: var(--stl-danger);
+      font-weight: 500;
+    }
+  }
+
+  .create-error {
+    margin-top: 10px;
+    color: var(--stl-danger);
+    font-size: 12px;
+  }
+}
+
+.muted {
+  color: var(--stl-text-muted);
+}

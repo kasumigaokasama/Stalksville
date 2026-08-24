@@ -1,0 +1,22 @@
+.narrow {
+  max-width: 760px;
+}
+
+section + section {
+  margin-top: 16px;
+}
+
+h2 {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.message {
+  color: var(--stl-text-muted);
+  font-size: 13px;
+  margin: 10px 0 0;
+}
+
+.muted {
+  color: var(--stl-text-muted);
+}

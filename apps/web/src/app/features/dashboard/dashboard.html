@@ -1,0 +1,76 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Overview</h1>
+      <div class="stl-subtitle">Intelligence collected so far — press <kbd>Ctrl K</kbd> to search.</div>
+    </div>
+  </div>
+
+  @if (isLoading() && !data()) {
+    <div class="stl-empty">Loading…</div>
+  } @else if (failed()) {
+    <div class="stl-empty">Could not load dashboard stats. Is the API running?</div>
+  } @else if (data(); as d) {
+    <div class="stat-cards">
+      @for (card of cards(); track card.label) {
+        <div class="stl-card stat">
+          <span class="stat-value">{{ card.value }}</span>
+          <span class="stat-label">{{ card.label }}</span>
+        </div>
+      }
+    </div>
+
+    <div class="columns">
+      <section class="stl-card">
+        <h2>Recent intelligence <span class="stl-tag stl-tag--derived">derived</span></h2>
+        @if (d.recentChanges.length === 0) {
+          <div class="stl-empty">
+            No changes yet. Look up a player (<code>Ctrl K</code> → <code>player:name</code>), then refresh them later.
+          </div>
+        } @else {
+          <table class="stl-table">
+            <thead>
+              <tr><th>Player</th><th>Change</th><th>When</th></tr>
+            </thead>
+            <tbody>
+              @for (change of d.recentChanges; track change.id) {
+                <tr>
+                  <td>
+                    <a [routerLink]="['/players', change.playerId]">{{ change.playerName }}</a>
+                  </td>
+                  <td>
+                    <span class="field-chip">{{ fieldLabel(change.field) }}</span>
+                    <span class="mono">{{ change.oldValue ?? '∅' }} → {{ change.newValue ?? '∅' }}</span>
+                  </td>
+                  <td class="muted">{{ formatRelative(change.detectedAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+
+      <section class="stl-card">
+        <h2>Recently seen players <span class="stl-tag stl-tag--observed">observed</span></h2>
+        @if (d.recentlySeenPlayers.length === 0) {
+          <div class="stl-empty">No players tracked yet.</div>
+        } @else {
+          <table class="stl-table">
+            <thead>
+              <tr><th>Player</th><th>Clan</th><th>Last seen</th></tr>
+            </thead>
+            <tbody>
+              @for (player of d.recentlySeenPlayers; track player.id) {
+                <tr>
+                  <td><a [routerLink]="['/players', player.id]">{{ player.username }}</a></td>
+                  <td class="muted">{{ player.currentClanName ?? (player.currentClanId ? 'clan not imported' : '—') }}</td>
+                  <td class="muted">{{ formatRelative(player.lastSeenAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+    </div>
+  }
+</div>

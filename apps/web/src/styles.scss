@@ -1,0 +1,264 @@
+/* Stalksville design tokens — dark-first analyst UI. */
+:root {
+  --stl-bg: #0b0e14;
+  --stl-bg-raised: #11151f;
+  --stl-bg-hover: #171c29;
+  --stl-border: #212839;
+  --stl-border-strong: #2d3550;
+  --stl-text: #e6e9f0;
+  --stl-text-muted: #8b93a7;
+  --stl-text-faint: #5c6478;
+
+  --stl-accent: #7c9aff;
+  --stl-accent-soft: rgba(124, 154, 255, 0.12);
+  --stl-success: #4ade80;
+  --stl-success-soft: rgba(74, 222, 128, 0.12);
+  --stl-warning: #fbbf24;
+  --stl-warning-soft: rgba(251, 191, 36, 0.12);
+  --stl-danger: #f87171;
+  --stl-danger-soft: rgba(248, 113, 113, 0.12);
+
+  /* Observed vs derived — the product's most important distinction. */
+  --stl-observed: #7dd3fc;
+  --stl-observed-soft: rgba(125, 211, 252, 0.12);
+  --stl-derived: #c084fc;
+  --stl-derived-soft: rgba(192, 132, 252, 0.12);
+
+  --stl-radius: 8px;
+  --stl-radius-sm: 5px;
+  --stl-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+  --stl-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --stl-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--stl-bg);
+  color: var(--stl-text);
+  font-family: var(--stl-font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: var(--stl-accent);
+  text-decoration: none;
+}
+
+code,
+.mono {
+  font-family: var(--stl-mono);
+  font-size: 0.92em;
+}
+
+/* --- shared primitives --- */
+.stl-card {
+  background: var(--stl-bg-raised);
+  border: 1px solid var(--stl-border);
+  border-radius: var(--stl-radius);
+  padding: 16px;
+}
+
+.stl-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.stl-tag--observed {
+  color: var(--stl-observed);
+  background: var(--stl-observed-soft);
+  border-color: rgba(125, 211, 252, 0.25);
+}
+
+.stl-tag--derived {
+  color: var(--stl-derived);
+  background: var(--stl-derived-soft);
+  border-color: rgba(192, 132, 252, 0.25);
+}
+
+.stl-tag--success {
+  color: var(--stl-success);
+  background: var(--stl-success-soft);
+}
+
+.stl-tag--warning {
+  color: var(--stl-warning);
+  background: var(--stl-warning-soft);
+}
+
+.stl-tag--danger {
+  color: var(--stl-danger);
+  background: var(--stl-danger-soft);
+}
+
+.stl-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--stl-radius-sm);
+  border: 1px solid var(--stl-border-strong);
+  background: var(--stl-bg-raised);
+  color: var(--stl-text);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--stl-font);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+
+  &:hover:not(:disabled) {
+    background: var(--stl-bg-hover);
+    border-color: var(--stl-accent);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: var(--stl-accent);
+    border-color: var(--stl-accent);
+    color: #0b0e14;
+    font-weight: 600;
+
+    &:hover:not(:disabled) {
+      background: #94aeff;
+    }
+  }
+}
+
+.stl-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--stl-radius-sm);
+  border: 1px solid var(--stl-border-strong);
+  background: var(--stl-bg);
+  color: var(--stl-text);
+  font-size: 13px;
+  font-family: var(--stl-font);
+  outline: none;
+
+  &:focus {
+    border-color: var(--stl-accent);
+    box-shadow: 0 0 0 3px var(--stl-accent-soft);
+  }
+
+  &::placeholder {
+    color: var(--stl-text-faint);
+  }
+}
+
+.stl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    text-align: left;
+    padding: 8px 10px;
+    color: var(--stl-text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--stl-border);
+  }
+
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--stl-border);
+    vertical-align: top;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.stl-kv {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) 1fr;
+  gap: 6px 16px;
+  font-size: 13px;
+
+  dt {
+    color: var(--stl-text-muted);
+    margin: 0;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.stl-empty {
+  color: var(--stl-text-muted);
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.stl-page {
+  padding: 24px 28px;
+  max-width: 1180px;
+}
+
+.stl-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .stl-subtitle {
+    color: var(--stl-text-muted);
+    font-size: 13px;
+    margin-top: 2px;
+  }
+}
+
+.stl-grid {
+  display: grid;
+  gap: 16px;
+}
+
+/* CDK dialog panel for the command palette. */
+.stl-palette-panel {
+  background: transparent;
+  box-shadow: none;
+  margin-top: 12vh;
+}

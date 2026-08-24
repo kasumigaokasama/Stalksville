@@ -1,0 +1,48 @@
+.lookup-card {
+  margin-bottom: 16px;
+
+  .lookup-row {
+    display: flex;
+    gap: 10px;
+
+    input {
+      flex: 1;
+    }
+  }
+
+  .lookup-feedback {
+    margin-top: 10px;
+    font-size: 12px;
+
+    &.ok {
+      color: var(--stl-success);
+    }
+
+    &.err {
+      color: var(--stl-danger);
+    }
+  }
+}
+
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+
+  h2 {
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .list-search {
+    width: 220px;
+  }
+}
+
+.muted {
+  color: var(--stl-text-muted);
+}

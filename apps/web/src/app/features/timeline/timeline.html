@@ -1,0 +1,46 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Timeline</h1>
+      <div class="stl-subtitle">Every observation and derivation, newest first.</div>
+    </div>
+    <div class="filters">
+      <select class="stl-input" [value]="entityFilter()" (change)="entityFilter.set($any($event.target).value)">
+        <option value="all">All entities</option>
+        <option value="player">Players</option>
+        <option value="clan">Clans</option>
+      </select>
+      <select class="stl-input" [value]="kindFilter()" (change)="kindFilter.set($any($event.target).value)">
+        <option value="all">Observed + derived</option>
+        <option value="observed">Observed only</option>
+        <option value="derived">Derived only</option>
+      </select>
+    </div>
+  </div>
+
+  <section class="stl-card">
+    @if (isLoading()) {
+      <div class="stl-empty">Loading timeline…</div>
+    } @else if (timeline().length === 0) {
+      <div class="stl-empty">
+        No events recorded yet — look up a player and refresh them later to generate changes.
+      </div>
+    } @else {
+      <ol class="timeline-list">
+        @for (event of timeline(); track event.id) {
+          <li class="timeline-item">
+            <span class="when mono" [title]="formatDateTime(event.occurredAt)">{{ formatRelative(event.occurredAt) }}</span>
+            <span class="stl-tag" [class.stl-tag--derived]="event.isDerived" [class.stl-tag--observed]="!event.isDerived">
+              {{ event.isDerived ? 'derived' : 'observed' }}
+            </span>
+            <span class="event-type">{{ event.eventType }}</span>
+            <span class="summary">
+              {{ event.summary ?? event.eventType }}
+              <a [routerLink]="entityLink(event)" class="entity-link">{{ event.entityType }}</a>
+            </span>
+          </li>
+        }
+      </ol>
+    }
+  </section>
+</div>

@@ -1,0 +1,78 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Compare players</h1>
+      <div class="stl-subtitle">Observed states side by side with overlap analysis.</div>
+    </div>
+  </div>
+
+  <section class="stl-card pickers">
+    <select class="stl-input" [value]="playerA()" (change)="playerA.set($any($event.target).value)">
+      <option value="">Player A…</option>
+      @for (player of players(); track player.id) {
+        <option [value]="player.id">{{ player.username }}</option>
+      }
+    </select>
+    <span class="vs">vs</span>
+    <select class="stl-input" [value]="playerB()" (change)="playerB.set($any($event.target).value)">
+      <option value="">Player B…</option>
+      @for (player of players(); track player.id) {
+        <option [value]="player.id">{{ player.username }}</option>
+      }
+    </select>
+    @if (sameSelected()) {
+      <span class="stl-tag stl-tag--warning">pick two different players</span>
+    }
+  </section>
+
+  @if (isLoading()) {
+    <div class="stl-empty">Comparing…</div>
+  } @else if (result(); as r) {
+    <section class="stl-card">
+      <div class="compare-heads">
+        <div>
+          <h2><a [routerLink]="['/players', r.a.player.id]">{{ r.a.player.username }}</a></h2>
+          <span class="mono muted">{{ r.a.player.wolvesvillePlayerId }}</span>
+        </div>
+        <div>
+          <h2><a [routerLink]="['/players', r.b.player.id]">{{ r.b.player.username }}</a></h2>
+          <span class="mono muted">{{ r.b.player.wolvesvillePlayerId }}</span>
+        </div>
+      </div>
+
+      <table class="stl-table compare-table">
+        <thead>
+          <tr><th>Field</th><th>A</th><th>B</th></tr>
+        </thead>
+        <tbody>
+          @for (field of r.fields; track field.field) {
+            <tr [class.differs]="field.a !== field.b">
+              <td class="muted">{{ field.field }}</td>
+              <td class="mono">{{ field.a ?? '—' }}</td>
+              <td class="mono">{{ field.b ?? '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+
+    <section class="stl-card">
+      <h2>Potential overlaps <span class="stl-tag stl-tag--derived">derived</span></h2>
+      @for (overlap of r.overlaps; track overlap.kind) {
+        <div class="overlap">
+          <div class="overlap-head">
+            <span class="overlap-kind">{{ overlap.kind }}</span>
+            <span class="mono">{{ overlap.value }}</span>
+            <span class="stl-tag" [class.stl-tag--derived]="overlap.confidence >= 0.5" [class.stl-tag--observed]="overlap.confidence >= 1">
+              {{ (overlap.confidence * 100).toFixed(0) }}%
+            </span>
+          </div>
+          <div class="muted evidence">Evidence: {{ overlap.evidence }}</div>
+        </div>
+      }
+      <p class="disclaimer">{{ r.disclaimer }}</p>
+    </section>
+  } @else if (playerA() && playerB()) {
+    <div class="stl-empty">Select two tracked players to compare.</div>
+  }
+</div>

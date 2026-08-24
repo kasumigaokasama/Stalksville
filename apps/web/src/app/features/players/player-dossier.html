@@ -1,0 +1,286 @@
+<div class="stl-page">
+  @if (isLoading() && !dossier()) {
+    <div class="stl-empty">Loading dossier…</div>
+  } @else if (notFound()) {
+    <div class="stl-empty">Player not found. It may never have been imported.</div>
+  } @else if (dossier(); as d) {
+    <div class="stl-page-header">
+      <div>
+        <h1>{{ d.player.username }}</h1>
+        <div class="stl-subtitle mono">ID {{ d.player.wolvesvillePlayerId }} · first seen {{ formatRelative(d.player.firstSeenAt) }}</div>
+      </div>
+      <div class="header-actions">
+        @if (refreshNote(); as note) {
+          <span class="refresh-note">{{ note }}</span>
+        }
+        @if (d.player.currentClanId; as clanId) {
+          <a class="stl-button" [routerLink]="['/clans', clanId]">
+            {{ d.player.currentClanName ?? 'Open clan' }}
+          </a>
+        }
+        <button class="stl-button stl-button--primary" type="button" (click)="refresh()" [disabled]="refreshing() || !auth.canWrite()">
+          {{ refreshing() ? 'Refreshing…' : 'Refresh from Wolvesville' }}
+        </button>
+      </div>
+    </div>
+
+    <nav class="tabs" role="tablist">
+      @for (t of tabs; track t.key) {
+        <button type="button" role="tab" [class.active]="tab() === t.key" (click)="tab.set(t.key)">
+          {{ t.label }}
+          @switch (t.key) {
+            @case ('changes') { <span class="count">{{ d.derived.totalChanges }}</span> }
+            @case ('snapshots') { <span class="count">{{ snapshots().length }}</span> }
+            @case ('clans') { <span class="count">{{ d.derived.memberships.length }}</span> }
+          }
+        </button>
+      }
+    </nav>
+
+    @switch (tab()) {
+      @case ('overview') {
+        <div class="overview-grid">
+          <section class="stl-card">
+            <h2>Observed state <span class="stl-tag stl-tag--observed">observed</span></h2>
+            @if (d.observed; as o) {
+              <dl class="stl-kv">
+                <dt>Level</dt><dd>{{ o.level ?? '—' }}</dd>
+                <dt>Clan</dt>
+                <dd>{{ o.clanWolvesvilleId ?? 'none' }}</dd>
+                <dt>Status</dt><dd>{{ o.status ?? '—' }}</dd>
+                <dt>Wins / losses</dt><dd>{{ o.wins }} / {{ o.losses }}</dd>
+                <dt>Games played</dt><dd>{{ o.gamesPlayed }}</dd>
+                <dt>Ranked rating</dt>
+                <dd>{{ o.rankedCurrentRating ?? '—' }}{{ o.rankedSeason ? ' (season ' + o.rankedSeason + ')' : '' }}</dd>
+                <dt>Achievements</dt><dd>{{ o.achievements ?? '—' }}</dd>
+                <dt>Friends</dt><dd>{{ o.friendCount }}</dd>
+                <dt>Badges</dt><dd>{{ o.badgeIds.length }}</dd>
+                <dt>Personal message</dt><dd>{{ o.personalMessage ?? '—' }}</dd>
+                <dt>Snapshot</dt>
+                <dd class="muted">
+                  {{ formatDateTime(o.capturedAt) }} · observed {{ o.observationCount }}×
+                  <div class="mono hash">{{ o.payloadHash }}</div>
+                  <div class="muted source">source: {{ o.source }}</div>
+                </dd>
+              </dl>
+            } @else {
+              <div class="stl-empty">No snapshot yet — refresh to observe.</div>
+            }
+          </section>
+
+          <section class="stl-card">
+            <h2>Relationships <span class="stl-tag stl-tag--derived">derived</span></h2>
+            @if (d.derived.relationships.length === 0) {
+              <div class="stl-empty">No relationships recorded yet.</div>
+            } @else {
+              <table class="stl-table">
+                <thead><tr><th>Type</th><th>Target</th><th>Confidence</th><th>Window</th></tr></thead>
+                <tbody>
+                  @for (rel of d.derived.relationships; track rel.targetEntityId + rel.type) {
+                    <tr>
+                      <td><span class="stl-tag" [class.stl-tag--success]="rel.isCurrent" [class.stl-tag--warning]="!rel.isCurrent">{{ rel.type }}</span></td>
+                      <td>
+                        @if (rel.targetEntityType === 'clan') {
+                          <a [routerLink]="['/clans', rel.targetEntityId]">{{ rel.targetName ?? 'clan not imported' }}</a>
+                        } @else {
+                          {{ rel.targetName ?? rel.targetEntityId }}
+                        }
+                      </td>
+                      <td class="mono">{{ (rel.confidence * 100).toFixed(0) }}%</td>
+                      <td class="muted">{{ formatRelative(rel.firstObservedAt) }} → {{ formatRelative(rel.lastObservedAt) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+        </div>
+      }
+
+      @case ('identity') {
+        <section class="stl-card">
+          <h2>Identity detail <span class="stl-tag stl-tag--observed">observed</span></h2>
+          @if (d.observed; as o) {
+            <dl class="stl-kv">
+              <dt>Username</dt><dd>{{ o.username }}</dd>
+              <dt>Wolvesville ID</dt><dd class="mono">{{ o.wolvesvillePlayerId }}</dd>
+              <dt>Stalksville ID</dt><dd class="mono">{{ d.player.id }}</dd>
+              <dt>Last online</dt><dd>{{ formatDateTime(o.lastOnline) }}</dd>
+              <dt>Profile icon</dt><dd>{{ o.profileIconName ?? o.profileIconId ?? '—' }}</dd>
+              <dt>Equipped avatar</dt><dd class="mono">{{ o.equippedAvatarId ?? '—' }}</dd>
+              <dt>Role cards</dt><dd>{{ o.roleCardIds.join(', ') || '—' }}</dd>
+              <dt>Badges</dt><dd>{{ o.badgeIds.join(', ') || '—' }}</dd>
+              <dt>Roses sent / received</dt><dd>{{ o.sentRosesCount ?? '—' }} / {{ o.receivedRosesCount ?? '—' }}</dd>
+            </dl>
+          }
+        </section>
+      }
+
+      @case ('clans') {
+        <section class="stl-card">
+          <h2>Membership history <span class="stl-tag stl-tag--derived">derived from snapshots</span></h2>
+          @if (d.derived.memberships.length === 0) {
+            <div class="stl-empty">No clan memberships recorded.</div>
+          } @else {
+            <table class="stl-table">
+              <thead><tr><th>Clan</th><th>Status</th><th>From</th><th>Until</th></tr></thead>
+              <tbody>
+                @for (m of d.derived.memberships; track m.clanId + m.startedAt) {
+                  <tr>
+                    <td><a [routerLink]="['/clans', m.clanId]">{{ m.clanName ?? 'clan not imported' }}</a>
+                      <span class="mono muted"> {{ m.wolvesvilleClanId }}</span></td>
+                    <td>
+                      <span class="stl-tag" [class.stl-tag--success]="m.isCurrent" [class.stl-tag--warning]="!m.isCurrent">
+                        {{ m.isCurrent ? 'current' : 'ended' }}
+                      </span>
+                    </td>
+                    <td class="muted">{{ formatDateTime(m.startedAt) }}</td>
+                    <td class="muted">{{ m.endedAt ? formatDateTime(m.endedAt) : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </section>
+      }
+
+      @case ('snapshots') {
+        <section class="stl-card">
+          <h2>Snapshots <span class="stl-tag stl-tag--observed">observed</span></h2>
+          <p class="hint">
+            Identical states are observed without storing duplicates — <code>observations</code> counts them.
+          </p>
+          @if (snapshots().length === 0) {
+            <div class="stl-empty">No snapshots yet.</div>
+          } @else {
+            <table class="stl-table">
+              <thead><tr><th>Captured</th><th>Observations</th><th>Hash</th><th>Source</th></tr></thead>
+              <tbody>
+                @for (s of snapshots(); track s.id) {
+                  <tr>
+                    <td>{{ formatDateTime(s.capturedAt) }}</td>
+                    <td class="mono">{{ s.observationCount }}</td>
+                    <td class="mono muted">{{ s.payloadHash.slice(0, 16) }}…</td>
+                    <td class="muted">{{ s.source }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </section>
+      }
+
+      @case ('changes') {
+        <section class="stl-card">
+          <h2>Detected changes <span class="stl-tag stl-tag--derived">derived · evidence-backed</span></h2>
+          @if (d.derived.recentChanges.length === 0) {
+            <div class="stl-empty">
+              No changes detected yet. Refresh after the player changes something in Wolvesville.
+            </div>
+          } @else {
+            <table class="stl-table">
+              <thead><tr><th>Field</th><th>Change</th><th>Detected</th><th></th></tr></thead>
+              <tbody>
+                @for (c of d.derived.recentChanges; track c.id) {
+                  <tr>
+                    <td>
+                      <span class="field-chip">{{ fieldLabel(c.field) }}</span>
+                      @if (c.kind !== 'Scalar') {
+                        <span class="stl-tag stl-tag--derived">{{ c.kind === 'SetAddition' ? 'added' : 'removed' }}</span>
+                      }
+                    </td>
+                    <td class="mono">{{ c.oldValue ?? '∅' }} → {{ c.newValue ?? '∅' }}</td>
+                    <td class="muted">{{ formatRelative(c.detectedAt) }}</td>
+                    <td>
+                      <button class="stl-button evidence-btn" type="button" (click)="selectedChange.set(selectedChange()?.id === c.id ? null : c)">
+                        {{ selectedChange()?.id === c.id ? 'Hide evidence' : 'Evidence' }}
+                      </button>
+                    </td>
+                  </tr>
+                  @if (selectedChange()?.id === c.id) {
+                    <tr class="evidence-row">
+                      <td colspan="4">
+                        <div class="evidence">
+                          <div class="evidence-title">Evidence — snapshots that prove this change:</div>
+                          @for (ev of c.evidence; track ev.sourceReference + ev.capturedAt) {
+                            <div class="evidence-item">
+                              <span class="mono">{{ ev.sourceReference }}</span>
+                              <span class="muted">captured {{ formatDateTime(ev.capturedAt) }}</span>
+                              @if (ev.payloadHash) {
+                                <span class="mono muted">{{ ev.payloadHash.slice(0, 16) }}…</span>
+                              }
+                            </div>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          }
+        </section>
+      }
+
+      @case ('intelligence') {
+        <div class="intel-grid">
+          <section class="stl-card">
+            <h2>Exposure score <span class="stl-tag stl-tag--derived">derived · explainable</span></h2>
+            <p class="hint">Measures how much surface the player's public Wolvesville data exposes. It never makes claims about real-world identity.</p>
+            @if (exposure(); as exposure) {
+              <div class="exposure-head">
+                <div class="exposure-total mono">{{ exposure.overall }}<span class="dim">/100</span></div>
+                <div class="exposure-bars">
+                  @for (category of exposure.categories; track category.name) {
+                    <div class="exposure-bar-row">
+                      <span class="bar-label">{{ category.name }}</span>
+                      <div class="bar-track"><div class="bar-fill" [style.width.%]="category.score"></div></div>
+                      <span class="mono bar-score">{{ category.score }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <details class="why">
+                <summary>Why? — every point and its evidence</summary>
+                @for (category of exposure.categories; track category.name) {
+                  <div class="why-category">
+                    <h3>{{ category.name }} ({{ category.score }})</h3>
+                    @for (factor of category.factors; track factor.label) {
+                      <div class="why-factor">
+                        <span class="mono points">+{{ factor.points }}</span>
+                        <span>{{ factor.label }}</span>
+                        <span class="muted evidence">{{ factor.evidence }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </details>
+            } @else {
+              <div class="stl-empty">Exposure unavailable — take a snapshot first.</div>
+            }
+          </section>
+
+          <section class="stl-card">
+            <h2>Insights <span class="stl-tag stl-tag--derived">derived · evidence-backed</span></h2>
+            @if (insights().length === 0) {
+              <div class="stl-empty">No anomalies detected in the change history.</div>
+            } @else {
+              @for (insight of insights(); track insight.title) {
+                <article class="insight">
+                  <header>
+                    <span class="stl-tag stl-tag--derived">{{ insight.classification }}</span>
+                    <span class="mono confidence">{{ (insight.confidence * 100).toFixed(0) }}%</span>
+                  </header>
+                  <h3>{{ insight.title }}</h3>
+                  <p>{{ insight.description }}</p>
+                  <footer class="muted">Evidence: {{ insight.evidenceChangeIds.length }} change record(s)</footer>
+                </article>
+              }
+            }
+          </section>
+        </div>
+      }
+    }
+  }
+</div>

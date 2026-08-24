@@ -1,0 +1,56 @@
+<div class="stl-page">
+  @if (isLoading() && !dossier()) {
+    <div class="stl-empty">Loading clan…</div>
+  } @else if (notFound()) {
+    <div class="stl-empty">Clan not found.</div>
+  } @else if (dossier(); as d) {
+    <div class="stl-page-header">
+      <div>
+        <h1>{{ d.clan.name ?? 'Clan not imported' }}</h1>
+        <div class="stl-subtitle mono">Wolvesville ID {{ d.clan.wolvesvilleClanId }}</div>
+      </div>
+    </div>
+
+    <div class="clan-grid">
+      <section class="stl-card">
+        <h2>Observed <span class="stl-tag stl-tag--observed">observed</span></h2>
+        <dl class="stl-kv">
+          <dt>Name</dt><dd>{{ d.clan.name ?? '— (import to fetch)' }}</dd>
+          <dt>Members</dt><dd>{{ d.clan.memberCount ?? '—' }}</dd>
+          <dt>Level</dt><dd>{{ d.clan.level ?? '—' }}</dd>
+          <dt>XP</dt><dd>{{ formatNumber(d.clan.xps) }}</dd>
+          <dt>Language</dt><dd>{{ d.clan.languageCode ?? '—' }}</dd>
+          <dt>Join type</dt><dd>{{ d.clan.joinType ?? '—' }}</dd>
+          <dt>Description</dt><dd>{{ d.clan.description ?? '—' }}</dd>
+          <dt>Imported</dt><dd>{{ d.clan.lastImportedAt ? formatDateTime(d.clan.lastImportedAt) : 'never' }}</dd>
+        </dl>
+      </section>
+
+      <section class="stl-card">
+        <h2>
+          Known members
+          <span class="stl-tag stl-tag--derived">derived from memberships</span>
+        </h2>
+        <p class="hint">
+          {{ d.openMembershipCount }} open memberships · {{ d.membershipHistoryCount }} membership records total.
+        </p>
+        @if (d.knownMembers.length === 0) {
+          <div class="stl-empty">No known members — import the clan from the Clans page.</div>
+        } @else {
+          <table class="stl-table">
+            <thead><tr><th>Player</th><th>Wolvesville ID</th><th>Last seen</th></tr></thead>
+            <tbody>
+              @for (member of d.knownMembers; track member.id) {
+                <tr>
+                  <td><a [routerLink]="['/players', member.id]">{{ member.username }}</a></td>
+                  <td class="mono muted">{{ member.wolvesvillePlayerId }}</td>
+                  <td class="muted">{{ formatRelative(member.lastSeenAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+    </div>
+  }
+</div>

@@ -1,0 +1,70 @@
+# Dev database:  docker compose up -d
+# Full stack:     docker compose --profile app up -d --build
+#
+# Secrets for the app profile (set in your shell or a local .env next to this file —
+# .env is gitignored):
+#   WOLVESVILLE_APIKEY         Wolvesville bot API key (backend-only)
+#   STALKSVILLE_ADMIN_PASSWORD admin password seeded on a fresh database
+#   STALKSVILLE_JWT_KEY        persistent JWT signing key (otherwise tokens die on restart)
+#   WOLVESVILLE_MODE           Real (default) or Mock (demo dataset, no key needed)
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: stalksville-postgres
+    environment:
+      POSTGRES_USER: stalksville
+      POSTGRES_PASSWORD: stalksville
+      POSTGRES_DB: stalksville
+    ports:
+      - "5432:5432"
+    volumes:
+      - stalksville-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stalksville -d stalksville"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: apps/api
+      dockerfile: Stalksville.Api/Dockerfile
+    profiles: ["app"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=stalksville;Username=stalksville;Password=stalksville
+      WOLVESVILLE__MODE: ${WOLVESVILLE_MODE:-Real}
+      WOLVESVILLE__APIKEY: ${WOLVESVILLE_APIKEY:-}
+      AUTH__ADMINPASSWORD: ${STALKSVILLE_ADMIN_PASSWORD:-}
+      AUTH__JWTKEY: ${STALKSVILLE_JWT_KEY:-}
+    ports:
+      - "5099:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: apps/api
+      dockerfile: Stalksville.Worker/Dockerfile
+    profiles: ["app"]
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=stalksville;Username=stalksville;Password=stalksville
+      WOLVESVILLE__MODE: ${WOLVESVILLE_MODE:-Real}
+      WOLVESVILLE__APIKEY: ${WOLVESVILLE_APIKEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: apps/web
+    profiles: ["app"]
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+
+volumes:
+  stalksville-pgdata:

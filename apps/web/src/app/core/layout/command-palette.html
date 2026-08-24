@@ -1,0 +1,48 @@
+<div class="palette" role="dialog" aria-label="Command palette">
+  <input
+    #input
+    class="stl-input palette-input"
+    type="text"
+    placeholder="Search… try player:shadowfox"
+    [value]="query()"
+    (input)="onQuery($any($event.target).value)"
+    (keydown.enter)="runFirst()"
+    (keydown.escape)="close()"
+  />
+
+  @if (playerResult(); as p) {
+    <button class="result" type="button" (click)="runFirst()">
+      <span class="result-icon">👤</span>
+      <span class="result-body">
+        <span class="result-title">{{ p.dossier.player.username }}</span>
+        <span class="result-sub">
+          Wolvesville ID {{ p.dossier.observed?.wolvesvillePlayerId }}
+          @if (p.changesDetectedInThisObservation > 0) {
+            · {{ p.changesDetectedInThisObservation }} change(s) detected
+          } @else if (p.wasReobserved) {
+            · unchanged since last snapshot
+          }
+        </span>
+      </span>
+      <span class="stl-tag stl-tag--observed">open dossier</span>
+    </button>
+  } @else if (isLoadingPlayer()) {
+    <div class="palette-note">Looking up player…</div>
+  } @else if (error(); as err) {
+    <div class="palette-note palette-note--error">{{ err }}</div>
+  }
+
+  @for (action of filteredNav(); track action.target) {
+    <button class="result" type="button" (click)="run(action)">
+      <span class="result-icon">→</span>
+      <span class="result-body">
+        <span class="result-title">{{ action.label }}</span>
+      </span>
+    </button>
+  }
+
+  <div class="palette-footer">
+    <span><kbd>↵</kbd> open first result</span>
+    <span><kbd>esc</kbd> close</span>
+  </div>
+</div>

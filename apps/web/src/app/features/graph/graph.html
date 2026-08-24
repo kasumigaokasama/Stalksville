@@ -1,0 +1,103 @@
+<div class="stl-page graph-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Graph</h1>
+      <div class="stl-subtitle">
+        @if (graph(); as g) {
+          {{ g.nodes.length }} nodes · {{ g.edges.length }} derived relationships
+        } @else {
+          loading…
+        }
+        — edges are derived intelligence with confidence
+      </div>
+    </div>
+    <div class="path-finder">
+      <select class="stl-input" [value]="pathFrom()" (change)="pathFrom.set($any($event.target).value)">
+        <option value="">From player…</option>
+        @for (player of players(); track player.id) {
+          <option [value]="player.id">{{ player.username }}</option>
+        }
+      </select>
+      <span class="arrow">→</span>
+      <select class="stl-input" [value]="pathTo()" (change)="pathTo.set($any($event.target).value)">
+        <option value="">To player…</option>
+        @for (player of players(); track player.id) {
+          <option [value]="player.id">{{ player.username }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <div class="graph-layout">
+    <section class="stl-card canvas-card">
+      @if (isLoading() && !graph()) {
+        <div class="stl-empty">Building graph…</div>
+      }
+      <div #canvas class="canvas" [class.dimmed]="isLoading() && !graph()"></div>
+      @if (graph(); as g) {
+        @if (g.nodes.length === 0) {
+          <div class="stl-empty overlay">No tracked entities yet — import players or a clan first.</div>
+        }
+      }
+    </section>
+
+    <aside class="side">
+      @if (selectedNode(); as node) {
+        <section class="stl-card detail">
+          <h2>{{ node.label }} <span class="stl-tag stl-tag--observed">{{ node.type }}</span></h2>
+          <dl class="stl-kv">
+            <dt>Type</dt><dd>{{ node.type }}</dd>
+            <dt>Snapshots</dt><dd class="mono">{{ node.snapshotCount }}</dd>
+            <dt>Changes</dt><dd class="mono">{{ node.changeCount }}</dd>
+            <dt>Imported</dt><dd>{{ node.imported ? 'yes' : 'stub only' }}</dd>
+          </dl>
+          <a class="stl-button" [routerLink]="entityLink(node)">Open dossier</a>
+        </section>
+      } @else if (selectedEdge(); as edge) {
+        <section class="stl-card detail">
+          <h2>
+            <span class="stl-tag stl-tag--derived">{{ edge.type }}</span>
+            <span class="stl-tag" [class.stl-tag--success]="edge.isCurrent" [class.stl-tag--warning]="!edge.isCurrent">
+              {{ edge.isCurrent ? 'current' : 'historical' }}
+            </span>
+          </h2>
+          <dl class="stl-kv">
+            <dt>Confidence</dt><dd class="mono">{{ (edge.confidence * 100).toFixed(0) }}%</dd>
+            <dt>First observed</dt><dd>{{ formatDateTime(edge.firstObservedAt) }}</dd>
+            <dt>Last observed</dt><dd>{{ formatDateTime(edge.lastObservedAt) }}</dd>
+            <dt>Evidence</dt><dd class="muted">membership history + snapshots</dd>
+          </dl>
+        </section>
+      } @else {
+        <section class="stl-card detail legend">
+          <h2>Legend</h2>
+          <div class="legend-row"><span class="dot player"></span> player</div>
+          <div class="legend-row"><span class="dot clan"></span> clan</div>
+          <div class="legend-row"><span class="line current"></span> MEMBER_OF (current)</div>
+          <div class="legend-row"><span class="line historical"></span> previously member (historical)</div>
+          <p class="hint">Click a node or edge for details. Pick two players above to find connection paths.</p>
+        </section>
+      }
+
+      @if (paths(); as found) {
+        <section class="stl-card detail">
+          <h2>Connection paths</h2>
+          @if (found.length === 0) {
+            <div class="stl-empty">No path found between these players.</div>
+          } @else {
+            @for (path of found; track $index) {
+              <div class="path">
+                @for (step of path; track step.id; let last = $last) {
+                  <span class="path-step">{{ step.label }}</span>
+                  @if (!last) {
+                    <span class="path-sep">→</span>
+                  }
+                }
+              </div>
+            }
+          }
+        </section>
+      }
+    </aside>
+  </div>
+</div>

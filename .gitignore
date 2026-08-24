@@ -1,0 +1,45 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+artifacts/
+TestResults/
+appsettings.*.local.json
+*.binlog
+
+# Node / Angular
+node_modules/
+dist/
+dist-ssr/
+.angular/
+npm-debug.log*
+yarn-error.log
+.playwright/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Secrets
+*.env
+.env.*
+secrets.json
+
+# IDE / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+Thumbs.db
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Local tool/scanner metadata
+.zcode/
+.mimosa/

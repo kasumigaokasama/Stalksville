@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="Stalksville.Api/Stalksville.Api.csproj" />
+  <Project Path="Stalksville.Application/Stalksville.Application.csproj" />
+  <Project Path="Stalksville.Domain/Stalksville.Domain.csproj" />
+  <Project Path="Stalksville.Infrastructure/Stalksville.Infrastructure.csproj" />
+  <Project Path="Stalksville.IntegrationTests/Stalksville.IntegrationTests.csproj" />
+  <Project Path="Stalksville.Intelligence/Stalksville.Intelligence.csproj" />
+  <Project Path="Stalksville.UnitTests/Stalksville.UnitTests.csproj" />
+  <Project Path="Stalksville.Worker/Stalksville.Worker.csproj" />
+</Solution>

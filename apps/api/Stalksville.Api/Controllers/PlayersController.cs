@@ -1,0 +1,102 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Stalksville.Api.Security;
+using Stalksville.Application.Advanced;
+using Stalksville.Application.Models;
+using Stalksville.Application.Players;
+
+namespace Stalksville.Api.Controllers;
+
+[ApiController]
+[Route("api/v1/players")]
+public sealed class PlayersController(PlayerService players, PlayerIntelligenceService intelligence) : ControllerBase
+{
+    /// <summary>Local (already tracked) players matching a username fragment.</summary>
+    [HttpGet]
+    [ProducesResponseType<IReadOnlyList<PlayerSummaryDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> List([FromQuery] string? query, CancellationToken cancellationToken)
+    {
+        var result = string.IsNullOrWhiteSpace(query)
+            ? await ToRecentAsync(players, cancellationToken)
+            : await players.ListLocalAsync(query.Trim(), cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>Exact-username live lookup against Wolvesville; imports/refreshes the player.</summary>
+    [HttpGet("lookup")]
+    [Authorize(Policy = Policies.Analyst)]
+    [ProducesResponseType<PlayerLookupResultDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Lookup([FromQuery] string username, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return BadRequest(new ProblemDetails { Title = "username query parameter is required" });
+        }
+
+        var result = await players.LookupAsync(username.Trim(), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("compare")]
+    [ProducesResponseType<CompareResultDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Compare([FromQuery] Guid a, [FromQuery] Guid b, CancellationToken cancellationToken)
+    {
+        return Ok(await intelligence.CompareAsync(a, b, cancellationToken));
+    }
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<PlayerDossierDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDossier(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await players.GetDossierAsync(id, cancellationToken));
+    }
+
+    /// <summary>Explainable public-information exposure score — every point lists its evidence.</summary>
+    [HttpGet("{id:guid}/exposure")]
+    [ProducesResponseType<ExposureResultDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetExposure(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await intelligence.GetExposureAsync(id, cancellationToken));
+    }
+
+    /// <summary>Anomaly insights derived from the change history, each with evidence change ids.</summary>
+    [HttpGet("{id:guid}/insights")]
+    [ProducesResponseType<IReadOnlyList<InsightDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetInsights(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await intelligence.GetInsightsAsync(id, cancellationToken));
+    }
+
+    /// <summary>Re-fetches the player from Wolvesville (bypasses cache) and runs the full pipeline.</summary>
+    [HttpPost("{id:guid}/refresh")]
+    [Authorize(Policy = Policies.Analyst)]
+    [ProducesResponseType<PlayerLookupResultDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Refresh(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await players.RefreshAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/snapshots")]
+    [ProducesResponseType<IReadOnlyList<SnapshotDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSnapshots(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await players.GetSnapshotsAsync(id, cancellationToken));
+    }
+
+    [HttpGet("{id:guid}/changes")]
+    [ProducesResponseType<IReadOnlyList<ChangeDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetChanges(Guid id, CancellationToken cancellationToken)
+    {
+        var (total, changes) = await players.GetChangesAsync(id, cancellationToken);
+        Response.Headers["X-Total-Count"] = total.ToString();
+        return Ok(changes);
+    }
+
+    private static async Task<IReadOnlyList<PlayerSummaryDto>> ToRecentAsync(PlayerService service, CancellationToken ct)
+    {
+        // Empty query: fall back to the recently seen list via a search that matches everything.
+        var result = await service.ListLocalAsync(string.Empty, ct);
+        return result;
+    }
+}

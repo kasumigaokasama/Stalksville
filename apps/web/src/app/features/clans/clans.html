@@ -1,0 +1,100 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Clans</h1>
+      <div class="stl-subtitle">Search live on Wolvesville; importing snapshots every member.</div>
+    </div>
+  </div>
+
+  @if (importNote(); as note) {
+    <div class="stl-card note">{{ note }}</div>
+  }
+
+  <section class="stl-card">
+    <div class="search-row">
+      <input
+        class="stl-input"
+        type="text"
+        placeholder="Clan name, e.g. Moon Wolves"
+        [value]="searchName()"
+        (input)="searchName.set($any($event.target).value)"
+        (keydown.enter)="search()"
+      />
+      <button class="stl-button stl-button--primary" type="button" (click)="search()" [disabled]="searching() || !searchName().trim()">
+        {{ searching() ? 'Searching…' : 'Search Wolvesville' }}
+      </button>
+    </div>
+
+    @if (searchError(); as err) {
+      <div class="feedback err">{{ err }}</div>
+    }
+
+    @if (searchResults(); as results) {
+      @if (results.length === 0) {
+        <div class="stl-empty">No clans matched that name.</div>
+      } @else {
+        <table class="stl-table">
+          <thead><tr><th>Clan</th><th>Members</th><th>Level</th><th>XP</th><th></th></tr></thead>
+          <tbody>
+            @for (clan of results; track clan.wolvesvilleClanId) {
+              <tr>
+                <td>
+                  <div class="clan-name">{{ clan.name }}</div>
+                  <div class="mono muted">{{ clan.wolvesvilleClanId }}</div>
+                </td>
+                <td class="mono">{{ clan.memberCount ?? '—' }}</td>
+                <td class="mono">{{ clan.level ?? '—' }}</td>
+                <td class="mono">{{ clan.xps ?? '—' }}</td>
+                <td>
+                  @if (auth.canWrite()) {
+                    <button
+                      class="stl-button"
+                      type="button"
+                      (click)="importClan(clan.wolvesvilleClanId)"
+                      [disabled]="importing() !== null"
+                    >
+                      {{ importing() === clan.wolvesvilleClanId ? 'Importing…' : 'Import members' }}
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    }
+  </section>
+
+  <section class="stl-card">
+    <div class="list-head">
+      <h2>Tracked clans <span class="stl-tag stl-tag--observed">observed</span></h2>
+      <input
+        class="stl-input list-search"
+        type="search"
+        placeholder="Filter tracked…"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+      />
+    </div>
+
+    @if (isLoadingLocal()) {
+      <div class="stl-empty">Loading…</div>
+    } @else if (localClans().length === 0) {
+      <div class="stl-empty">No tracked clans yet — import one above, or open a player's clan.</div>
+    } @else {
+      <table class="stl-table">
+        <thead><tr><th>Clan</th><th>Members</th><th>Imported</th><th>Last seen</th></tr></thead>
+        <tbody>
+          @for (clan of localClans(); track clan.id) {
+            <tr>
+              <td><a [routerLink]="['/clans', clan.id]">{{ clan.name ?? '(not imported)' }}</a></td>
+              <td class="mono">{{ clan.memberCount ?? '—' }}</td>
+              <td class="muted">{{ clan.lastImportedAt ? formatRelative(clan.lastImportedAt) : 'never' }}</td>
+              <td class="muted">{{ formatRelative(clan.lastSeenAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</div>

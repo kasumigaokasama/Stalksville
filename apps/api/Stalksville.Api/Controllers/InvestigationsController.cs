@@ -1,0 +1,98 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Stalksville.Api.Security;
+using Stalksville.Application.Abstractions;
+using Stalksville.Application.Advanced;
+using Stalksville.Application.Ai;
+using Stalksville.Application.Investigations;
+
+namespace Stalksville.Api.Controllers;
+
+[ApiController]
+[Route("api/v1/investigations")]
+public sealed class InvestigationsController(
+    InvestigationService investigations,
+    IAiNarrator narrator,
+    InvestigationExporter exporter) : ControllerBase
+{
+    private string Actor => User.FindFirst("name")?.Value ?? "unknown";
+
+    [HttpGet]
+    [ProducesResponseType<IReadOnlyList<InvestigationSummaryDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> List([FromQuery] bool includeArchived = false, CancellationToken cancellationToken = default)
+    {
+        return Ok(await investigations.ListAsync(includeArchived, cancellationToken));
+    }
+
+    [HttpPost]
+    [Authorize(Policy = Policies.Analyst)]
+    [ProducesResponseType<InvestigationWorkspaceDto>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> Create([FromBody] CreateInvestigationRequest request, CancellationToken cancellationToken)
+    {
+        var workspace = await investigations.CreateAsync(request.Title, request.Description, Actor, cancellationToken);
+        return CreatedAtAction(nameof(GetWorkspace), new { id = workspace.Investigation.Id }, workspace);
+    }
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<InvestigationWorkspaceDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetWorkspace(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await investigations.GetWorkspaceAsync(id, cancellationToken));
+    }
+
+    [HttpPost("{id:guid}/targets")]
+    [Authorize(Policy = Policies.Analyst)]
+    [ProducesResponseType<InvestigationWorkspaceDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> AddTarget(Guid id, [FromBody] AddTargetRequest request, CancellationToken cancellationToken)
+    {
+        return Ok(await investigations.AddTargetAsync(id, request.EntityType, request.EntityId, Actor, cancellationToken));
+    }
+
+    [HttpDelete("{id:guid}/targets/{targetId:guid}")]
+    [Authorize(Policy = Policies.Analyst)]
+    [ProducesResponseType<InvestigationWorkspaceDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RemoveTarget(Guid id, Guid targetId, CancellationToken cancellationToken)
+    {
+        return Ok(await investigations.RemoveTargetAsync(id, targetId, cancellationToken));
+    }
+
+    [HttpPost("{id:guid}/notes")]
+    [Authorize(Policy = Policies.Analyst)]
+    [ProducesResponseType<InvestigationWorkspaceDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> AddNote(Guid id, [FromBody] AddNoteRequest request, CancellationToken cancellationToken)
+    {
+        return Ok(await investigations.AddNoteAsync(id, request.Content, Actor, cancellationToken));
+    }
+
+    /// <summary>Explains the case with the Observed/Derived/Hypothesis/Unknown guardrail (plan §40/§41).</summary>
+    [HttpPost("{id:guid}/explain")]
+    [ProducesResponseType<AiNarrative>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Explain(Guid id, CancellationToken cancellationToken)
+    {
+        var workspace = await investigations.GetWorkspaceAsync(id, cancellationToken);
+        var narrative = await narrator.ExplainInvestigationAsync(workspace, cancellationToken);
+        return Ok(narrative);
+    }
+
+    /// <summary>Case report export: Markdown, CSV (timeline) or JSON (plan §35).</summary>
+    [HttpGet("{id:guid}/export")]
+    public async Task<IActionResult> Export(Guid id, [FromQuery] string format = "md", CancellationToken cancellationToken = default)
+    {
+        var (contentType, fileName, content) = await exporter.ExportAsync(id, format, cancellationToken);
+        return File(content, contentType, fileName);
+    }
+
+    [HttpPost("{id:guid}/archive")]
+    [ProducesResponseType<InvestigationWorkspaceDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Archive(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await investigations.SetStatusAsync(id, archived: true, cancellationToken));
+    }
+
+    [HttpPost("{id:guid}/reopen")]
+    [ProducesResponseType<InvestigationWorkspaceDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Reopen(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await investigations.SetStatusAsync(id, archived: false, cancellationToken));
+    }
+}

@@ -1,0 +1,54 @@
+<div class="stl-page narrow">
+  <div class="stl-page-header">
+    <div>
+      <h1>Settings</h1>
+      <div class="stl-subtitle">Wolvesville connection & capability report</div>
+    </div>
+  </div>
+
+  <section class="stl-card">
+    <h2>Wolvesville connection</h2>
+    @if (isLoading() && !status()) {
+      <div class="stl-empty">Checking connection…</div>
+    } @else if (status(); as s) {
+      <dl class="stl-kv">
+        <dt>Status</dt>
+        <dd><span class="stl-tag" [class]="statusClass()">{{ s.status }}</span></dd>
+        <dt>Mode</dt><dd class="mono">{{ s.mode }}</dd>
+        <dt>Write operations</dt>
+        <dd>{{ s.writeOperationsEnabled ? 'enabled' : 'disabled (by design — not implemented)' }}</dd>
+      </dl>
+      @if (s.message; as message) {
+        <p class="message">{{ message }}</p>
+      }
+    } @else {
+      <div class="stl-empty">Status unavailable — is the API running?</div>
+    }
+  </section>
+
+  @if (status(); as s) {
+    <section class="stl-card">
+      <h2>Capabilities</h2>
+      <table class="stl-table">
+        <thead><tr><th>Capability</th><th>State</th><th>Note</th></tr></thead>
+        <tbody>
+          @for (cap of s.capabilities; track cap.name) {
+            <tr>
+              <td>{{ cap.name }}</td>
+              <td><span class="stl-tag" [class]="capabilityClass(cap.status)">{{ cap.status }}</span></td>
+              <td class="muted">{{ cap.note ?? '' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+
+  <section class="stl-card">
+    <h2>API key</h2>
+    <p class="message">
+      The Wolvesville API key is stored server-side only (user-secrets or environment) and is never sent to this app.
+      Configure it on the backend as <code>Wolvesville:ApiKey</code>; see the repository README.
+    </p>
+  </section>
+</div>

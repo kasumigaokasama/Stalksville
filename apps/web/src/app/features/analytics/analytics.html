@@ -1,0 +1,51 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Analytics</h1>
+      <div class="stl-subtitle">Observed activity over time — all series are derived aggregates.</div>
+    </div>
+    <select class="stl-input range" [value]="days()" (change)="days.set(+$any($event.target).value)">
+      <option value="7">Last 7 days</option>
+      <option value="30">Last 30 days</option>
+      <option value="90">Last 90 days</option>
+    </select>
+  </div>
+
+  @if (isLoading() && !summary()) {
+    <div class="stl-empty">Loading…</div>
+  } @else if (summary(); as s) {
+    <div class="stat-cards">
+      @for (card of cards(); track card.label) {
+        <div class="stl-card stat">
+          <span class="stat-value mono">{{ card.value }}</span>
+          <span class="stat-label">{{ card.label }}</span>
+        </div>
+      }
+    </div>
+
+    <div class="charts">
+      @for (series of s.series; track series.name) {
+        <section class="stl-card chart-card">
+          <h2>{{ series.name }} <span class="stl-tag stl-tag--derived">derived</span></h2>
+          @if (series.points.length === 0) {
+            <div class="stl-empty">No data in this window.</div>
+          } @else {
+            <div class="bars" [title]="series.points[series.points.length - 1].date + ': ' + series.points[series.points.length - 1].value">
+              @for (point of series.points; track point.date) {
+                <div
+                  class="bar"
+                  [style.height.%]="(point.value / maxValue(series)) * 100"
+                  [title]="point.date + ': ' + point.value"
+                ></div>
+              }
+            </div>
+            <div class="axis">
+              <span>{{ series.points[0].date }}</span>
+              <span>{{ series.points[series.points.length - 1].date }}</span>
+            </div>
+          }
+        </section>
+      }
+    </div>
+  }
+</div>

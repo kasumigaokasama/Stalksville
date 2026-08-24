@@ -1,0 +1,213 @@
+<div class="stl-page">
+  @if (isLoading() && !workspace()) {
+    <div class="stl-empty">Loading investigation…</div>
+  } @else if (notFound()) {
+    <div class="stl-empty">Investigation not found.</div>
+  } @else if (workspace(); as w) {
+    <div class="stl-page-header">
+      <div>
+        <h1><span class="case-number mono">#{{ w.investigation.caseNumber.toString().padStart(4, '0') }}</span> {{ w.investigation.title }}</h1>
+        <div class="stl-subtitle">
+          created {{ formatRelative(w.investigation.createdAt) }}
+          @if (w.investigation.description) {
+            · {{ w.investigation.description }}
+          }
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="stl-tag" [class.stl-tag--success]="w.investigation.status === 'active'" [class.stl-tag--warning]="w.investigation.status !== 'active'">
+          {{ w.investigation.status }}
+        </span>
+        <button class="stl-button" type="button" (click)="setStatus(w.investigation.status === 'active')" [disabled]="busy() || !auth.canWrite()">
+          {{ w.investigation.status === 'active' ? 'Archive' : 'Reopen' }}
+        </button>
+        <button class="stl-button stl-button--primary" type="button" (click)="explain()" [disabled]="explaining()">
+          {{ explaining() ? 'Explaining…' : 'Explain this case' }}
+        </button>
+        <div class="export-buttons">
+          <button class="stl-button" type="button" (click)="export('md')">Export MD</button>
+          <button class="stl-button" type="button" (click)="export('csv')">CSV</button>
+          <button class="stl-button" type="button" (click)="export('json')">JSON</button>
+        </div>
+      </div>
+    </div>
+
+    @if (actionError(); as err) {
+      <div class="stl-card action-error">{{ err }}</div>
+    }
+
+    <div class="stat-cards">
+      <div class="stl-card stat"><span class="stat-value mono">{{ w.stats.targets }}</span><span class="stat-label">Targets</span></div>
+      <div class="stl-card stat"><span class="stat-value mono">{{ w.stats.timelineEvents }}</span><span class="stat-label">Timeline events</span></div>
+      <div class="stl-card stat"><span class="stat-value mono">{{ w.stats.snapshotsCollected }}</span><span class="stat-label">Snapshots</span></div>
+      <div class="stl-card stat"><span class="stat-value mono">{{ w.stats.highConfidenceRelationships }}</span><span class="stat-label">High-confidence relationships</span></div>
+    </div>
+
+    <div class="columns">
+      <section class="stl-card">
+        <h2>Targets <span class="stl-tag stl-tag--observed">observed entities</span></h2>
+
+        @if (w.investigation.status === 'active' && auth.canWrite()) {
+          <div class="add-target">
+            <select class="stl-input kind" [value]="targetKind()" (change)="targetKind.set($any($event.target).value)">
+              <option value="player">Player</option>
+              <option value="clan">Clan</option>
+            </select>
+            <input
+              class="stl-input"
+              type="search"
+              placeholder="Search tracked entities…"
+              [value]="candidateQuery()"
+              (input)="candidateQuery.set($any($event.target).value)"
+            />
+          </div>
+          @if (candidateQuery().trim().length >= 1) {
+            @if (candidatesLoading()) {
+              <div class="candidates muted">Searching…</div>
+            } @else if (candidates().length === 0) {
+              <div class="candidates muted">No tracked {{ targetKind() }}s match. Import one first (Players / Clans pages).</div>
+            } @else {
+              <div class="candidates">
+                @for (candidate of candidates(); track candidate.id) {
+                  <button class="stl-button candidate" type="button" (click)="addTarget(candidate.id)" [disabled]="busy()">
+                    + {{ candidate.label }} <span class="mono muted">{{ candidate.sub }}</span>
+                  </button>
+                }
+              </div>
+            }
+          }
+        }
+
+        @if (w.targets.length === 0) {
+          <div class="stl-empty">No targets yet.</div>
+        } @else {
+          <table class="stl-table">
+            <thead><tr><th>Target</th><th>Snapshots</th><th>Current rel.</th><th>Added</th><th></th></tr></thead>
+            <tbody>
+              @for (target of w.targets; track target.id) {
+                <tr>
+                  <td>
+                    <a [routerLink]="entityLink(target.entityType, target.entityId)">{{ target.displayName }}</a>
+                    <span class="stl-tag stl-tag--observed">{{ target.entityType }}</span>
+                  </td>
+                  <td class="mono">{{ target.snapshotCount }}</td>
+                  <td class="mono">{{ target.currentRelationships }}</td>
+                  <td class="muted" [title]="target.addedBy">{{ formatRelative(target.addedAt) }}</td>
+                  <td>
+                    @if (w.investigation.status === 'active' && auth.canWrite()) {
+                      <button class="stl-button remove" type="button" (click)="removeTarget(target.id)" [disabled]="busy()">✕</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+
+      <section class="stl-card">
+        <h2>Notes</h2>
+        @if (w.investigation.status === 'active' && auth.canWrite()) {
+          <div class="note-form">
+            <textarea
+              class="stl-input"
+              rows="3"
+              placeholder="Observation, hypothesis, next steps…"
+              [value]="noteDraft()"
+              (input)="noteDraft.set($any($event.target).value)"
+            ></textarea>
+            <button class="stl-button" type="button" (click)="addNote()" [disabled]="busy() || !noteDraft().trim()">Add note</button>
+          </div>
+          @if (noteError(); as err) {
+            <div class="note-error">{{ err }}</div>
+          }
+        }
+        @if (w.notes.length === 0) {
+          <div class="stl-empty">No notes yet.</div>
+        } @else {
+          <ul class="notes">
+            @for (note of w.notes; track note.id) {
+              <li class="note">
+                <div class="note-meta">
+                  <span class="note-author">{{ note.author }}</span>
+                  <span class="muted" [title]="formatDateTime(note.createdAt)">{{ formatRelative(note.createdAt) }}</span>
+                </div>
+                <p class="note-content">{{ note.content }}</p>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
+
+    @if (narrative(); as n) {
+      <section class="stl-card narrative-card">
+        <h2>
+          Case explanation
+          <span class="stl-tag stl-tag--observed">{{ n.provider }}</span>
+          @if (n.model; as model) {
+            <span class="stl-tag stl-tag--derived">{{ model }}</span>
+          }
+        </h2>
+        <p class="hint">{{ n.disclaimer }}</p>
+        <div class="narrative-grid">
+          <div class="narrative-section">
+            <h3 class="observed">Observed</h3>
+            <ul>
+              @for (item of n.observed; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </div>
+          <div class="narrative-section">
+            <h3 class="derived">Derived</h3>
+            <ul>
+              @for (item of n.derived; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </div>
+          <div class="narrative-section">
+            <h3 class="hypothesis">Hypothesis</h3>
+            <ul>
+              @for (item of n.hypothesis; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </div>
+          <div class="narrative-section">
+            <h3 class="unknown">Unknown</h3>
+            <ul>
+              @for (item of n.unknown; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </div>
+        </div>
+      </section>
+    }
+
+    <section class="stl-card">
+      <h2>Case timeline <span class="stl-tag stl-tag--derived">derived aggregation</span></h2>
+      @if (w.timeline.length === 0) {
+        <div class="stl-empty">No events for the current targets yet.</div>
+      } @else {
+        <ol class="timeline-list">
+          @for (event of w.timeline; track event.id) {
+            <li class="timeline-item">
+              <span class="when mono" [title]="formatDateTime(event.occurredAt)">{{ formatRelative(event.occurredAt) }}</span>
+              <span class="stl-tag" [class.stl-tag--derived]="event.isDerived" [class.stl-tag--observed]="!event.isDerived">
+                {{ event.isDerived ? 'derived' : 'observed' }}
+              </span>
+              <span class="event-type">{{ event.eventType }}</span>
+              <span class="summary">
+                {{ event.summary ?? event.eventType }}
+                <a [routerLink]="entityLink(event.entityType, event.entityId)" class="entity-link">{{ event.entityType }}</a>
+              </span>
+            </li>
+          }
+        </ol>
+      }
+    </section>
+  }
+</div>

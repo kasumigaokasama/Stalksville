@@ -1,0 +1,65 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Investigations</h1>
+      <div class="stl-subtitle">Cases organize tracked players and clans with notes and an aggregated timeline.</div>
+    </div>
+    <label class="archived-toggle">
+      <input type="checkbox" [checked]="includeArchived()" (change)="includeArchived.set($any($event.target).checked)" />
+      show archived
+    </label>
+  </div>
+
+  @if (auth.canWrite()) {
+  <section class="stl-card create-card">
+    <h2>New investigation</h2>
+    <form class="create-form" (submit)="create(); $event.preventDefault()">
+      <label class="field">
+        Title
+        <input class="stl-input" type="text" placeholder="e.g. Moon Wolves membership churn" [formField]="createForm.title" />
+        @if (createForm.title().touched() && createForm.title().errors().length) {
+          <span class="error">{{ createForm.title().errors()[0].message }}</span>
+        }
+      </label>
+      <label class="field">
+        Description <span class="optional">(optional)</span>
+        <input class="stl-input" type="text" [formField]="createForm.description" />
+      </label>
+      <button class="stl-button stl-button--primary" type="submit" [disabled]="createForm().invalid() || creating()">
+        {{ creating() ? 'Creating…' : 'Create case' }}
+      </button>
+    </form>
+    @if (createError(); as err) {
+      <div class="create-error">{{ err }}</div>
+    }
+  </section>
+  }
+
+  <section class="stl-card">
+    @if (isLoading()) {
+      <div class="stl-empty">Loading…</div>
+    } @else if (investigations().length === 0) {
+      <div class="stl-empty">No investigations yet — create one above.</div>
+    } @else {
+      <table class="stl-table">
+        <thead><tr><th>Case</th><th>Title</th><th>Status</th><th>Targets</th><th>Notes</th><th>Updated</th></tr></thead>
+        <tbody>
+          @for (inv of investigations(); track inv.id) {
+            <tr>
+              <td class="mono">#{{ inv.caseNumber.toString().padStart(4, '0') }}</td>
+              <td><a [routerLink]="['/investigations', inv.id]">{{ inv.title }}</a></td>
+              <td>
+                <span class="stl-tag" [class.stl-tag--success]="inv.status === 'active'" [class.stl-tag--warning]="inv.status !== 'active'">
+                  {{ inv.status }}
+                </span>
+              </td>
+              <td class="mono">{{ inv.targetCount }}</td>
+              <td class="mono">{{ inv.noteCount }}</td>
+              <td class="muted">{{ formatRelative(inv.updatedAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</div>

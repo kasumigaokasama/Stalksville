@@ -1,0 +1,138 @@
+.path-finder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  select {
+    width: 170px;
+  }
+
+  .arrow {
+    color: var(--stl-text-faint);
+  }
+}
+
+.graph-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 16px;
+
+  @media (max-width: 950px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.canvas-card {
+  position: relative;
+  height: 560px;
+  padding: 0;
+  overflow: hidden;
+
+  .canvas {
+    width: 100%;
+    height: 100%;
+
+    &.dimmed {
+      opacity: 0.35;
+    }
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(11, 14, 20, 0.5);
+  }
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail {
+  h2 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .stl-button {
+    margin-top: 12px;
+    justify-content: center;
+  }
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--stl-text-muted);
+  padding: 4px 0;
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+
+    &.player {
+      background: #7c9aff;
+    }
+
+    &.clan {
+      background: #4ade80;
+      border-radius: 3px;
+    }
+  }
+
+  .line {
+    width: 26px;
+    height: 0;
+    border-top: 2px solid #c084fc;
+
+    &.historical {
+      border-top-style: dashed;
+      border-top-color: #7a5fa0;
+    }
+  }
+}
+
+.hint {
+  color: var(--stl-text-faint);
+  font-size: 11px;
+  margin: 10px 0 0;
+}
+
+.path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--stl-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .path-step {
+    background: var(--stl-bg-hover);
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+
+  .path-sep {
+    color: var(--stl-text-faint);
+  }
+}
+
+.muted {
+  color: var(--stl-text-muted);
+}

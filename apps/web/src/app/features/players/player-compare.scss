@@ -1,0 +1,73 @@
+.pickers {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  select {
+    width: 220px;
+  }
+
+  .vs {
+    color: var(--stl-text-faint);
+    font-size: 12px;
+  }
+}
+
+.compare-heads {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 12px;
+
+  h2 {
+    font-size: 16px;
+  }
+}
+
+.compare-table tr.differs td {
+  background: var(--stl-derived-soft);
+
+  &:first-child {
+    border-radius: var(--stl-radius-sm) 0 0 var(--stl-radius-sm);
+  }
+}
+
+.overlap {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--stl-border);
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+
+  .overlap-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .overlap-kind {
+      font-weight: 600;
+      font-size: 13px;
+      flex: 1;
+    }
+  }
+
+  .evidence {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+}
+
+.disclaimer {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--stl-border-strong);
+  border-radius: var(--stl-radius-sm);
+  color: var(--stl-warning);
+  font-size: 12px;
+}
+
+.muted {
+  color: var(--stl-text-muted);
+}

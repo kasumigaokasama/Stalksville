@@ -1,0 +1,39 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">STV</span>
+      <span class="brand-name">Stalksville</span>
+    </div>
+
+    <nav class="nav">
+      @for (item of nav; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active">
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <span class="user-avatar">{{ (auth.user()?.username ?? '?').charAt(0).toUpperCase() }}</span>
+        <span class="user-meta">
+          <span class="user-name">{{ auth.user()?.username }}</span>
+          <span class="user-role">{{ auth.user()?.role }}</span>
+        </span>
+      </div>
+      <button class="stl-button logout" type="button" (click)="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="search-trigger" type="button" (click)="openPalette()">
+        <span class="search-hint">Search everything…</span>
+        <kbd>Ctrl K</kbd>
+      </button>
+    </header>
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>
