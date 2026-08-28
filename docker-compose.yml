@@ -66,6 +66,9 @@ services:
       WOLVESVILLE__MODE: ${WOLVESVILLE_MODE:-Real}
       WOLVESVILLE__APIKEY: ${WOLVESVILLE_APIKEY:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      # Compact snapshot history: keep the newest snapshot per player plus everything younger
+      # than 90 days (0 = disabled). Our-database-only storage hygiene.
+      Worker__SnapshotRetentionDays: "90"
     depends_on:
       postgres:
         condition: service_healthy

@@ -66,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<ICatalogStore, CatalogStore>();
         services.AddScoped<ISearchStore, SearchStore>();
         services.AddScoped<IApiKeyStore, ApiKeyStore>();
+        services.AddScoped<Retention.RetentionService>();
         services.AddScoped<Seeding.StalksvilleSeeder>();
 
         RegisterWolvesvilleClient(services, configuration);
