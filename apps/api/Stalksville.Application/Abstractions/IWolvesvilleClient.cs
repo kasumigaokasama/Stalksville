@@ -15,7 +15,7 @@ public interface IWolvesvilleClient
     /// <summary>"Real" or "Mock".</summary>
     string Mode { get; }
 
-    /// <summary>Exact-username player lookup: GET /players/username/{username}.</summary>
+    /// <summary>Exact-username player lookup: GET /players/search?username={username}.</summary>
     Task<PlayerObservation> GetPlayerByUsernameAsync(string username, bool bypassCache = false, CancellationToken cancellationToken = default);
 
     /// <summary>Player profile by Wolvesville id: GET /players/{playerId}.</summary>

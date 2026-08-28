@@ -54,21 +54,21 @@ Endpoints used (all verified against https://api-docs.wolvesville.com/):
 | Client method | Endpoint | Notes |
 | --- | --- | --- |
 | `GetPlayerById` | `GET /players/{playerId}` | full profile |
-| `GetPlayerByUsername` | `GET /players/username/{username}` | exact-match lookup |
+| `GetPlayerByUsername` | `GET /players/search?username={username}` | exact-match lookup |
 | `SearchClans` | `GET /clans/search?name=…` | supports `exactName` etc. |
 | `GetClanInfo` | `GET /clans/{clanId}/info` | |
-| `GetClanMembers` | `GET /clans/{clanId}/members` | full player profiles per member |
+| `GetClanMembers` | `GET /clans/{clanId}/members` | `ClanMember` objects keyed by `playerId` (lighter than full profiles) |
 | `Ping` | `GET /roles` | cheap authenticated call for connectivity status |
 
 **No write endpoints are implemented.** The capability model (`GET /api/v1/system/wolvesville/status`) reports write operations as disabled; clan-bot-gated endpoints (chat, announcements, ledger, logs, blocklist, quests) are listed as "requires clan bot" and are not called in this phase.
 
-Verified live against the production API: `/roles` (ping), `/clans/search`, `/clans/{id}/info` work with a regular bot key; `/clans/{id}/members` returns an empty list unless the bot is a clan bot of that clan — which is why clan imports can legitimately yield zero known members. Real Wolvesville IDs are GUID-like strings (36 chars); identity columns are sized accordingly.
+Verified live against the production API: `/roles` (ping), `/players/search`, `/clans/search`, `/clans/{id}/info` and `/clans/{id}/members` all work with a regular bot key. Real Wolvesville IDs are GUID-like strings (36 chars); identity columns are sized accordingly.
 
 ## Authentication
 
 - JWT bearer, HS256, key from configuration (`Auth:JwtKey`) or ephemeral in Development.
 - Fallback authorize policy: every `/api/v1` route requires authentication except `/auth/login`.
-- Seeded `admin` user (role `ADMIN`); roles `ANALYST`/`VIEWER` exist in the model for later phases.
+- Seeded `admin` user (role `ADMIN`); roles `ANALYST`/`VIEWER` gate write vs read-only access.
 - Internal rate limiting: fixed window per user, 100 req/min.
 
 ## Data model (initial)
