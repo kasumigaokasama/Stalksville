@@ -167,6 +167,14 @@ public sealed record HighscoreCaptureResultDto(
     int EntriesStored,
     int RankShiftAlerts);
 
+// ---- Workspace search ----
+
+public sealed record SearchHitDto(
+    string Type,
+    string Id,
+    string Title,
+    string? Subtitle);
+
 public sealed record DerivedDto(
     int TotalChanges,
     IReadOnlyList<ChangeDto> RecentChanges,

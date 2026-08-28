@@ -21,6 +21,11 @@ interface Candidate {
   sub: string;
 }
 
+interface Assignee {
+  id: string;
+  username: string;
+}
+
 /**
  * Investigation workspace (master plan §44): targets, notes, aggregated timeline and stats for
  * one case.
@@ -39,8 +44,13 @@ export class InvestigationWorkspace {
 
   private readonly workspaceResource = httpResource<InvestigationWorkspaceDto>(() => `/api/v1/investigations/${this.id()}`);
 
+  private readonly assigneesResource = httpResource<Assignee[]>(() => '/api/v1/investigations/assignees');
+
   protected readonly workspace = computed(() =>
     this.workspaceResource.hasValue() ? this.workspaceResource.value() : null,
+  );
+  protected readonly assignees = computed(() =>
+    this.assigneesResource.hasValue() ? this.assigneesResource.value() ?? [] : [],
   );
   protected readonly isLoading = computed(() => this.workspaceResource.isLoading());
   protected readonly notFound = computed(() => this.workspaceResource.error() !== undefined && !this.workspace());
@@ -71,11 +81,18 @@ export class InvestigationWorkspace {
   }
 
   /** Fetches the report as a blob (auth header included) and triggers a browser download. */
-  protected async export(format: 'md' | 'csv' | 'json'): Promise<void> {
+  protected async export(format: 'md' | 'csv' | 'json' | 'html'): Promise<void> {
     const blob = await firstValueFrom(
       this.http.get(`/api/v1/investigations/${this.id()}/export?format=${format}`, { responseType: 'blob' }),
     );
     const url = URL.createObjectURL(blob as Blob);
+
+    if (format === 'html') {
+      // The print report opens in its own tab and auto-invokes the browser print dialog (→ PDF).
+      window.open(url, '_blank');
+      return;
+    }
+
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = `stalksville-case-${this.workspace()?.investigation.caseNumber.toString().padStart(4, '0')}.${format}`;
@@ -151,6 +168,34 @@ export class InvestigationWorkspace {
         null,
       )),
     );
+  }
+
+  // ---- collaboration: assignment + tags (expansion phase 4) ----
+
+  protected async setAssignee(userId: string): Promise<void> {
+    await this.mutate(() => this.patch({ assignedToUserId: userId || null, assigneeProvided: true }));
+  }
+
+  protected async addTag(input: HTMLInputElement): Promise<void> {
+    const tag = input.value.trim();
+    if (!tag || !this.workspace()) {
+      return;
+    }
+    input.value = '';
+    const tags = [...this.workspace()!.investigation.tags, tag];
+    await this.mutate(() => this.patch({ tags }));
+  }
+
+  protected async removeTag(tag: string): Promise<void> {
+    if (!this.workspace()) {
+      return;
+    }
+    const tags = this.workspace()!.investigation.tags.filter((t) => t !== tag);
+    await this.mutate(() => this.patch({ tags }));
+  }
+
+  private patch(body: Partial<{ title: string; description: string; assignedToUserId: string | null; assigneeProvided: boolean; tags: string[] }>): Promise<InvestigationWorkspaceDto> {
+    return firstValueFrom(this.http.patch<InvestigationWorkspaceDto>(`/api/v1/investigations/${this.id()}`, body));
   }
 
   private async mutate(request: () => Promise<InvestigationWorkspaceDto>, onSuccess?: () => void): Promise<void> {

@@ -25,6 +25,10 @@
         </span>
       </div>
       <button class="stl-button logout" type="button" (click)="logout()">Sign out</button>
+      <button class="stl-button theme-toggle" type="button" (click)="theme.toggle()"
+              [title]="theme.current() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+        {{ theme.current() === 'dark' ? '☀' : '☾' }}
+      </button>
     </div>
   </aside>
 

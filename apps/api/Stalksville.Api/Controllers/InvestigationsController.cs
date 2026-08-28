@@ -5,17 +5,34 @@ using Stalksville.Application.Abstractions;
 using Stalksville.Application.Advanced;
 using Stalksville.Application.Ai;
 using Stalksville.Application.Investigations;
+using Stalksville.Domain.Entities;
 
 namespace Stalksville.Api.Controllers;
+
+public sealed record AssigneeDto(Guid Id, string Username);
 
 [ApiController]
 [Route("api/v1/investigations")]
 public sealed class InvestigationsController(
     InvestigationService investigations,
+    IUserStore users,
     IAiNarrator narrator,
     InvestigationExporter exporter) : ControllerBase
 {
     private string Actor => User.FindFirst("name")?.Value ?? "unknown";
+
+    /// <summary>Users available for case assignment (analysts and admins).</summary>
+    [HttpGet("assignees")]
+    [Authorize(Policy = Policies.Analyst)]
+    [ProducesResponseType<IReadOnlyList<AssigneeDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Assignees(CancellationToken cancellationToken)
+    {
+        var list = await users.ListAsync(cancellationToken);
+        return Ok(list
+            .Where(u => u.Role is UserRole.Analyst or UserRole.Admin)
+            .Select(u => new AssigneeDto(u.Id, u.Username))
+            .ToList());
+    }
 
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<InvestigationSummaryDto>>(StatusCodes.Status200OK)]
@@ -38,6 +55,23 @@ public sealed class InvestigationsController(
     public async Task<IActionResult> GetWorkspace(Guid id, CancellationToken cancellationToken)
     {
         return Ok(await investigations.GetWorkspaceAsync(id, cancellationToken));
+    }
+
+    /// <summary>Partial update: title, description, assignee and tags. Omitted fields stay put.</summary>
+    [HttpPatch("{id:guid}")]
+    [Authorize(Policy = Policies.Analyst)]
+    [ProducesResponseType<InvestigationWorkspaceDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateInvestigationRequest request, CancellationToken cancellationToken)
+    {
+        var workspace = await investigations.UpdateAsync(
+            id,
+            request.Title,
+            request.Description,
+            request.AssignedToUserId,
+            request.AssigneeProvided,
+            request.Tags,
+            cancellationToken);
+        return Ok(workspace);
     }
 
     [HttpPost("{id:guid}/targets")]

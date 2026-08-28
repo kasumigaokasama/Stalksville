@@ -1,4 +1,4 @@
-/* Stalksville design tokens — dark-first analyst UI. */
+/* Stalksville design tokens — dark-first analyst UI, light mode via [data-theme="light"]. */
 :root {
   --stl-bg: #0b0e14;
   --stl-bg-raised: #11151f;
@@ -30,6 +30,35 @@
 
   --stl-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --stl-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+}
+
+/* Light mode: same structure, adjusted surfaces and saturation. The observed/derived hues keep
+   their identity (sky/violet) with darker shades for contrast on light surfaces. */
+[data-theme='light'] {
+  --stl-bg: #f4f6fa;
+  --stl-bg-raised: #ffffff;
+  --stl-bg-hover: #eceff5;
+  --stl-border: #d8dde8;
+  --stl-border-strong: #c2c9d9;
+  --stl-text: #1a2233;
+  --stl-text-muted: #55607a;
+  --stl-text-faint: #8b93a7;
+
+  --stl-accent: #3b5bdb;
+  --stl-accent-soft: rgba(59, 91, 219, 0.1);
+  --stl-success: #15803d;
+  --stl-success-soft: rgba(21, 128, 61, 0.1);
+  --stl-warning: #b45309;
+  --stl-warning-soft: rgba(180, 83, 9, 0.1);
+  --stl-danger: #b91c1c;
+  --stl-danger-soft: rgba(185, 28, 28, 0.08);
+
+  --stl-observed: #0369a1;
+  --stl-observed-soft: rgba(3, 105, 161, 0.1);
+  --stl-derived: #7e22ce;
+  --stl-derived-soft: rgba(126, 34, 206, 0.1);
+
+  --stl-shadow: 0 10px 30px rgba(26, 34, 51, 0.12);
 }
 
 * {

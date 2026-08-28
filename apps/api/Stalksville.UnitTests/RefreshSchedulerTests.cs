@@ -59,7 +59,7 @@ public sealed class InvestigationFactsTests
         var entityId = Guid.NewGuid();
         return new InvestigationWorkspaceDto(
             new InvestigationSummaryDto(Guid.NewGuid(), 42, "Test case", null, "active",
-                DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1, 0),
+                null, [], DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1, 0),
             new InvestigationStatsDto(1, 1, snapshotsPerTarget, 1),
             [new InvestigationTargetDto(Guid.NewGuid(), "player", entityId, "flex",
                 DateTimeOffset.UtcNow, "admin", snapshotsPerTarget, 1)],

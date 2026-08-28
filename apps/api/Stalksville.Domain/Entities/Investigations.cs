@@ -23,6 +23,12 @@ public sealed class Investigation
 
     public InvestigationStatus Status { get; set; } = InvestigationStatus.Active;
 
+    /// <summary>Analyst the case is assigned to (users.Id), null = unassigned.</summary>
+    public Guid? AssignedToUserId { get; set; }
+
+    /// <summary>Free-form case tags (jsonb array of short strings).</summary>
+    public List<string> Tags { get; set; } = [];
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }

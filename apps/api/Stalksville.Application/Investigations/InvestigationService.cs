@@ -34,6 +34,56 @@ public sealed class InvestigationService(
         return await GetWorkspaceAsync(investigation.Id, cancellationToken);
     }
 
+    public async Task<InvestigationWorkspaceDto> UpdateAsync(
+        Guid investigationId,
+        string? title,
+        string? description,
+        Guid? assignedToUserId,
+        bool assigneeProvided,
+        IReadOnlyList<string>? tags,
+        CancellationToken cancellationToken = default)
+    {
+        var investigation = await investigations.FindByIdAsync(investigationId, cancellationToken)
+            ?? throw new EntityNotFoundException("investigation", investigationId);
+
+        if (title is not null)
+        {
+            var trimmed = title.Trim();
+            if (trimmed.Length is < 3 or > 160)
+            {
+                throw new ArgumentException("Title must be between 3 and 160 characters.");
+            }
+
+            investigation.Title = trimmed;
+        }
+
+        if (description is not null)
+        {
+            investigation.Description = description.Trim() is { Length: > 0 } d ? d : null;
+        }
+
+        if (assigneeProvided)
+        {
+            investigation.AssignedToUserId = assignedToUserId;
+        }
+
+        if (tags is not null)
+        {
+            investigation.Tags = tags
+                .Select(t => t.Trim().ToLowerInvariant())
+                .Where(t => t.Length is > 0 and <= 32)
+                .Distinct(StringComparer.Ordinal)
+                .Take(12)
+                .ToList();
+        }
+
+        await investigations.UpdateAsync(investigation, cancellationToken);
+        await audit.WriteAsync(AuditActions.InvestigationUpdated, $"investigation:{investigation.CaseNumber}",
+            new { investigation.Title, investigation.AssignedToUserId, investigation.Tags }, cancellationToken);
+
+        return await GetWorkspaceAsync(investigation.Id, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<InvestigationSummaryDto>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default)
     {
         var items = await investigations.ListAsync(includeArchived, cancellationToken);
@@ -208,6 +258,8 @@ public sealed class InvestigationService(
         investigation.Title,
         investigation.Description,
         investigation.Status.ToString().ToLowerInvariant(),
+        investigation.AssignedToUserId,
+        investigation.Tags,
         investigation.CreatedAt,
         investigation.UpdatedAt,
         targetCount,

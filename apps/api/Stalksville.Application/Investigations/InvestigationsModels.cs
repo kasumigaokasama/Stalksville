@@ -2,6 +2,14 @@ namespace Stalksville.Application.Investigations;
 
 public sealed record CreateInvestigationRequest(string Title, string? Description);
 
+/// <summary>Partial update: only provided fields change. assignedToUserId clears with null.</summary>
+public sealed record UpdateInvestigationRequest(
+    string? Title,
+    string? Description,
+    Guid? AssignedToUserId,
+    bool AssigneeProvided,
+    IReadOnlyList<string>? Tags);
+
 public sealed record AddTargetRequest(string EntityType, Guid EntityId);
 
 public sealed record AddNoteRequest(string Content);
@@ -12,6 +20,8 @@ public sealed record InvestigationSummaryDto(
     string Title,
     string? Description,
     string Status,
+    Guid? AssignedToUserId,
+    IReadOnlyList<string> Tags,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     int TargetCount,

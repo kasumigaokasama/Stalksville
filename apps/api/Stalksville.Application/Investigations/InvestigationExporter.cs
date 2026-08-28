@@ -30,9 +30,41 @@ public sealed class InvestigationExporter(
                 Encoding.UTF8.GetBytes(ToCsv(workspace))),
             "json" => ("application/json", $"stalksville-case-{padded}.json",
                 Encoding.UTF8.GetBytes(JsonSerializer.Serialize(workspace, WebJson))),
-            _ => throw new ArgumentException("format must be md, csv or json.")
+            // Print-optimized HTML: open in a browser, Ctrl+P → PDF. Zero-dependency by design.
+            "html" => ("text/html; charset=utf-8", $"stalksville-case-{padded}.html",
+                Encoding.UTF8.GetBytes(ToHtml(workspace, await BuildRelationshipLinesAsync(investigationId, cancellationToken)))),
+            _ => throw new ArgumentException("format must be md, csv, json or html.")
         };
     }
+
+    private static string ToHtml(InvestigationWorkspaceDto workspace, List<string> relationships)
+    {
+        // The report body is the Markdown report rendered as preformatted text with print CSS;
+        // open in a browser, Ctrl+P → PDF. Zero-dependency by design.
+        return $$"""
+            <!doctype html>
+            <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <title>Stalksville case {{workspace.Investigation.CaseNumber:0000}}</title>
+              <style>
+                body { margin: 2.2cm; background: #fff; }
+                pre { white-space: pre-wrap; font: 13px/1.55 Georgia, 'Times New Roman', serif; color: #111; }
+                @media print { body { margin: 0; } }
+              </style>
+            </head>
+            <body>
+              <pre>{{EncodeHtml(ToMarkdown(workspace, relationships))}}</pre>
+              <script>window.addEventListener('load', () => setTimeout(() => window.print(), 300));</script>
+            </body>
+            </html>
+            """;
+    }
+
+    private static string EncodeHtml(string value) => value
+        .Replace("&", "&amp;")
+        .Replace("<", "&lt;")
+        .Replace(">", "&gt;");
 
     private async Task<List<string>> BuildRelationshipLinesAsync(Guid investigationId, CancellationToken cancellationToken)
     {

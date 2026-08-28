@@ -57,4 +57,31 @@ test.describe('Investigations (mock Wolvesville)', () => {
     await page.locator('.filters select').nth(1).selectOption('derived');
     await expect(page.locator('.timeline-item .stl-tag--derived').first()).toBeVisible({ timeout: 15_000 });
   });
+  test('command palette finds cases by prose and workspace shows tags', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel('Username').fill('admin');
+    await page.getByLabel('Password').fill(ADMIN_PASSWORD);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible({ timeout: 20_000 });
+
+    // Create a case with distinctive prose the palette can find via full-text search.
+    await page.getByRole('link', { name: 'Investigations' }).click();
+    await page.getByPlaceholder('e.g. Moon Wolves membership churn').fill('Zephyr cliff investigation');
+    await page.getByRole('button', { name: 'Create case' }).click();
+    await expect(page.getByRole('heading', { name: /Zephyr cliff investigation/ })).toBeVisible({ timeout: 15_000 });
+
+    // Tag the case from the workspace.
+    const tagInput = page.locator('.tag-input');
+    await tagInput.fill('high-priority');
+    await tagInput.press('Enter');
+    await expect(page.locator('.tag-chip', { hasText: 'high-priority' })).toBeVisible({ timeout: 15_000 });
+
+    // The palette finds the case by a word from its title.
+    await page.keyboard.press('Control+k');
+    await page.getByPlaceholder(/Search…/).fill('zephyr');
+    await expect(page.locator('.stl-palette-panel .result', { hasText: 'Zephyr cliff investigation' })).toBeVisible({ timeout: 15_000 });
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { name: /Zephyr cliff investigation/ })).toBeVisible({ timeout: 15_000 });
+  });
 });
+

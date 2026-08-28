@@ -28,6 +28,7 @@ public static class AuditActions
     public const string ClanImported = "CLAN_IMPORTED";
     public const string ClanSearched = "CLAN_SEARCHED";
     public const string InvestigationCreated = "INVESTIGATION_CREATED";
+    public const string InvestigationUpdated = "INVESTIGATION_UPDATED";
     public const string InvestigationArchived = "INVESTIGATION_ARCHIVED";
     public const string InvestigationReopened = "INVESTIGATION_REOPENED";
     public const string InvestigationTargetAdded = "INVESTIGATION_TARGET_ADDED";

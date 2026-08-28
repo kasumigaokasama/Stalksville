@@ -252,3 +252,59 @@
 .muted {
   color: var(--stl-text-muted);
 }
+
+// ---- case meta: assignment + tags (expansion phase 4) ----
+
+.case-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: var(--stl-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tag-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  .tag-remove {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    font-size: 12px;
+    line-height: 1;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+}
+
+.tag-input {
+  width: 140px;
+  font-size: 12px;
+}

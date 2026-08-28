@@ -3,17 +3,18 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { PlayerLookupResultDto } from '../api/api.model';
+import { PlayerLookupResultDto, SearchHitDto } from '../api/api.model';
 
 export interface PaletteAction {
-  kind: 'navigate' | 'player';
+  kind: 'navigate' | 'player' | 'search';
   label: string;
   target: string;
 }
 
 /**
- * CTRL+K command palette. Supports prefixes: `player:<username>` performs a live Wolvesville
- * lookup (importing the player); anything else filters navigation actions.
+ * CTRL+K command palette. Free text searches the whole workspace (tracked players and clans by
+ * name, active investigations by title/description/notes via PostgreSQL FTS); the prefix
+ * `player:<username>` performs a live Wolvesville lookup that imports the player.
  */
 @Component({
   selector: 'stl-command-palette',
@@ -31,19 +32,18 @@ export class CommandPalette {
   private readonly navigateActions: PaletteAction[] = [
     { kind: 'navigate', label: 'Overview', target: '/dashboard' },
     { kind: 'navigate', label: 'Players', target: '/players' },
+    { kind: 'navigate', label: 'Highscores', target: '/highscores' },
     { kind: 'navigate', label: 'Clans', target: '/clans' },
     { kind: 'navigate', label: 'Investigations', target: '/investigations' },
     { kind: 'navigate', label: 'Graph', target: '/graph' },
     { kind: 'navigate', label: 'Timeline', target: '/timeline' },
+    { kind: 'navigate', label: 'Alerts', target: '/alerts' },
     { kind: 'navigate', label: 'Analytics', target: '/analytics' },
     { kind: 'navigate', label: 'Compare players', target: '/players/compare' },
     { kind: 'navigate', label: 'Settings — Wolvesville connection', target: '/settings' },
   ];
 
-  private readonly playerLookup = httpResource<PlayerLookupResultDto>(() => {
-    const name = this.playerQuery();
-    return name === null ? undefined : `/api/v1/players/lookup?username=${encodeURIComponent(name)}`;
-  });
+  // ---- live Wolvesville lookup via player: prefix ----
 
   private readonly playerQuery = computed(() => {
     const q = this.query().trim();
@@ -54,17 +54,14 @@ export class CommandPalette {
     return name.length >= 2 ? name : null;
   });
 
+  private readonly playerLookup = httpResource<PlayerLookupResultDto>(() => {
+    const name = this.playerQuery();
+    return name === null ? undefined : `/api/v1/players/lookup?username=${encodeURIComponent(name)}`;
+  });
+
   protected readonly playerResult = computed(() =>
     this.playerLookup.hasValue() ? this.playerLookup.value() : null,
   );
-
-  protected readonly filteredNav = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    if (q.startsWith('player:')) {
-      return [];
-    }
-    return this.navigateActions.filter((a) => a.label.toLowerCase().includes(q));
-  });
 
   protected readonly isLoadingPlayer = computed(() => this.playerLookup.isLoading());
 
@@ -75,6 +72,46 @@ export class CommandPalette {
     }
     return 'No player found for that exact username (Wolvesville lookups are exact-match).';
   });
+
+  // ---- workspace search for anything that is not a player: lookup ----
+
+  protected readonly searchQuery = computed(() => {
+    const q = this.query().trim();
+    if (q.length < 2 || q.toLowerCase().startsWith('player:')) {
+      return null;
+    }
+    return q;
+  });
+
+  private readonly searchResource = httpResource<SearchHitDto[]>(() => {
+    const q = this.searchQuery();
+    return q === null ? undefined : `/api/v1/search?q=${encodeURIComponent(q)}`;
+  });
+
+  protected readonly searchHits = computed(() => {
+    if (this.searchQuery() === null) {
+      return [];
+    }
+    return this.searchResource.hasValue() ? this.searchResource.value() ?? [] : [];
+  });
+
+  protected readonly isLoadingSearch = computed(() => this.searchResource.isLoading());
+
+  protected readonly filteredNav = computed(() => {
+    const q = this.query().trim().toLowerCase();
+    if (q.length > 0) {
+      return [];
+    }
+    return this.navigateActions;
+  });
+
+  protected hitTarget(hit: SearchHitDto): string {
+    return hit.type === 'player' ? `/players/${hit.id}` : hit.type === 'clan' ? `/clans/${hit.id}` : `/investigations/${hit.id}`;
+  }
+
+  protected hitIcon(hit: SearchHitDto): string {
+    return hit.type === 'player' ? '👤' : hit.type === 'clan' ? '🏠' : '🗂';
+  }
 
   ngAfterViewInit(): void {
     this.input().nativeElement.focus();
@@ -88,8 +125,10 @@ export class CommandPalette {
     this.dialogRef.close();
     if (action.kind === 'navigate') {
       void this.router.navigateByUrl(action.target);
-    } else {
+    } else if (action.kind === 'player') {
       void this.router.navigateByUrl(`/players/${action.target}`);
+    } else {
+      void this.router.navigateByUrl(action.target);
     }
   }
 
@@ -99,6 +138,13 @@ export class CommandPalette {
       this.run({ kind: 'player', label: player.dossier.player.username, target: player.dossier.player.id });
       return;
     }
+
+    const hit = this.searchHits()[0];
+    if (hit) {
+      this.run({ kind: 'search', label: hit.title, target: this.hitTarget(hit) });
+      return;
+    }
+
     const nav = this.filteredNav()[0];
     if (nav) {
       this.run(nav);

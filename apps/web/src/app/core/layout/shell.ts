@@ -4,6 +4,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../auth/auth';
 import { UnreadAlerts } from '../alerts/unread-alerts';
+import { Theme } from './theme';
 import { CommandPalette, type PaletteAction } from './command-palette';
 
 @Component({
@@ -17,6 +18,7 @@ export class Shell {
 
   protected readonly auth = inject(AuthService);
   protected readonly unreadAlerts = inject(UnreadAlerts);
+  protected readonly theme = inject(Theme);
 
   protected readonly nav = [
     { path: '/dashboard', label: 'Overview' },

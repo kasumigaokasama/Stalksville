@@ -28,9 +28,42 @@
           <button class="stl-button" type="button" (click)="export('md')">Export MD</button>
           <button class="stl-button" type="button" (click)="export('csv')">CSV</button>
           <button class="stl-button" type="button" (click)="export('json')">JSON</button>
+          <button class="stl-button" type="button" (click)="export('html')">Print / PDF</button>
         </div>
       </div>
     </div>
+
+    @if (auth.canWrite()) {
+      <section class="stl-card case-meta">
+        <div class="meta-row">
+          <span class="meta-label">Assignee</span>
+          <select class="stl-input" [value]="w.investigation.assignedToUserId ?? ''" (change)="setAssignee($any($event.target).value)" [disabled]="busy()">
+            <option value="">unassigned</option>
+            @for (assignee of assignees(); track assignee.id) {
+              <option [value]="assignee.id">{{ assignee.username }}</option>
+            }
+          </select>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Tags</span>
+          <div class="tag-editor">
+            @for (tag of w.investigation.tags; track tag) {
+              <span class="stl-tag stl-tag--derived tag-chip">
+                {{ tag }}
+                <button class="tag-remove" type="button" aria-label="Remove tag" [disabled]="busy()" (click)="removeTag(tag)">×</button>
+              </span>
+            }
+            <input
+              class="stl-input tag-input"
+              type="text"
+              placeholder="add tag + ↵"
+              maxlength="32"
+              (keydown.enter)="addTag($any($event.target))"
+            />
+          </div>
+        </div>
+      </section>
+    }
 
     @if (actionError(); as err) {
       <div class="stl-card action-error">{{ err }}</div>

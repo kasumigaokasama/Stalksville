@@ -170,6 +170,8 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.Property(x => x.Title).HasMaxLength(160);
             e.Property(x => x.Description).HasMaxLength(2048);
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Tags).HasColumnType("jsonb");
+            e.HasIndex(x => x.AssignedToUserId);
             e.HasIndex(x => x.CaseNumber).IsUnique();
         });
 

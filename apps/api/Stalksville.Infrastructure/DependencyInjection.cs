@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IInvestigationStore, InvestigationStore>();
         services.AddScoped<IAlertStore, AlertStore>();
         services.AddScoped<IHighscoreStore, HighscoreStore>();
+        services.AddScoped<ISearchStore, SearchStore>();
         services.AddScoped<Seeding.StalksvilleSeeder>();
 
         RegisterWolvesvilleClient(services, configuration);

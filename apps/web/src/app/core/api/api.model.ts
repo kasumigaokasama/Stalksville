@@ -283,10 +283,19 @@ export interface InvestigationSummaryDto {
   title: string;
   description: string | null;
   status: string;
+  assignedToUserId: string | null;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
   targetCount: number;
   noteCount: number;
+}
+
+export interface SearchHitDto {
+  type: string;
+  id: string;
+  title: string;
+  subtitle: string | null;
 }
 
 export interface InvestigationTargetDto {

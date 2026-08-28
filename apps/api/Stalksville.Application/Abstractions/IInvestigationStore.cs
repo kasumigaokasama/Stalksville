@@ -9,6 +9,9 @@ public interface IInvestigationStore
 {
     Task<Investigation> CreateAsync(string title, string? description, CancellationToken cancellationToken = default);
 
+    /// <summary>Persists edits to a loaded investigation (title/description/assignee/tags).</summary>
+    Task UpdateAsync(Investigation investigation, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<InvestigationListItem>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default);
 
     Task<Investigation?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);

@@ -23,6 +23,13 @@ public sealed class InvestigationStore(StalksvilleDbContext db) : IInvestigation
         return investigation;
     }
 
+    public async Task UpdateAsync(Investigation investigation, CancellationToken cancellationToken = default)
+    {
+        investigation.UpdatedAt = DateTimeOffset.UtcNow;
+        db.Investigations.Update(investigation);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<InvestigationListItem>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default)
     {
         var investigations = await db.Investigations
