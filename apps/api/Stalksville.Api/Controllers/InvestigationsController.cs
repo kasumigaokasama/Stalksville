@@ -117,6 +117,7 @@ public sealed class InvestigationsController(
     }
 
     [HttpPost("{id:guid}/archive")]
+    [Authorize(Policy = Policies.Analyst)]
     [ProducesResponseType<InvestigationWorkspaceDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Archive(Guid id, CancellationToken cancellationToken)
     {
@@ -124,6 +125,7 @@ public sealed class InvestigationsController(
     }
 
     [HttpPost("{id:guid}/reopen")]
+    [Authorize(Policy = Policies.Analyst)]
     [ProducesResponseType<InvestigationWorkspaceDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Reopen(Guid id, CancellationToken cancellationToken)
     {

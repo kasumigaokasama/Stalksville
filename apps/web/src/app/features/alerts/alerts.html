@@ -55,7 +55,7 @@
                 </div>
               }
               <div class="alert-meta">
-                <a [routerLink]="['/players', alert.entityId]">{{ alert.entityTitle }}</a>
+                <a [routerLink]="entityLink(alert)">{{ alert.entityTitle }}</a>
                 <span class="when mono" [title]="formatDateTime(alert.createdAt)">{{ formatRelative(alert.createdAt) }}</span>
                 @if (!alert.readAt) {
                   <button class="stl-button small" type="button" [disabled]="busy()" (click)="markRead(alert)">Mark read</button>

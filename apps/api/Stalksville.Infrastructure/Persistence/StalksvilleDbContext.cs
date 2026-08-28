@@ -49,6 +49,7 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.Property(x => x.Username).HasMaxLength(64);
             e.Property(x => x.Role).HasConversion<string>().HasMaxLength(16);
             e.HasIndex(x => x.Username).IsUnique();
+            e.HasIndex(x => x.Role);
         });
 
         modelBuilder.Entity<Player>(e =>
@@ -145,6 +146,7 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.Property(x => x.Metadata).HasColumnType("jsonb");
             e.HasIndex(x => new { x.EntityType, x.EntityId, x.OccurredAt });
             e.HasIndex(x => x.OccurredAt);
+            e.HasIndex(x => new { x.EventType, x.OccurredAt });
         });
 
         modelBuilder.Entity<ApiRequestLog>(e =>
@@ -154,6 +156,7 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.Property(x => x.Endpoint).HasMaxLength(256);
             e.Property(x => x.ErrorMessage).HasMaxLength(1024);
             e.HasIndex(x => x.RequestedAt);
+            e.HasIndex(x => new { x.Endpoint, x.RequestedAt });
         });
 
         modelBuilder.Entity<AuditLog>(e =>
@@ -223,7 +226,8 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.Property(x => x.WolvesvillePlayerId).HasMaxLength(64);
             e.Property(x => x.Username).HasMaxLength(64);
             e.Property(x => x.UsernameLower).HasMaxLength(64);
-            e.HasIndex(x => new { x.Period, x.CapturedAt, x.Rank });
+            // Append-only boards: one row per (board, capture, rank) — also guards re-captures.
+            e.HasIndex(x => new { x.Period, x.CapturedAt, x.Rank }).IsUnique();
             e.HasIndex(x => x.UsernameLower);
             e.HasIndex(x => x.PlayerId);
         });

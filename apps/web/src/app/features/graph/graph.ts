@@ -200,13 +200,6 @@ export class Graph implements OnDestroy {
     });
   }
 
-  protected runPaths(): void {
-    // Both selects are bound to signals; the paths resource derives from them automatically.
-    if (!this.pathFrom() || !this.pathTo()) {
-      this.pathsResource.reload();
-    }
-  }
-
   protected entityLink(node: { type: string; id: string }): string {
     return node.type === 'player' ? `/players/${node.id}` : `/clans/${node.id}`;
   }

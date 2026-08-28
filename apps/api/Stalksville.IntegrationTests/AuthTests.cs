@@ -70,6 +70,20 @@ public sealed class AuthTests : IAsyncLifetime
         Assert.Equal("admin", meBody.RootElement.GetProperty("username").GetString());
     }
 
+    [Fact]
+    public async Task Health_IsAnonymousAndReportsComponents()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
+        Assert.Equal("healthy", body.RootElement.GetProperty("status").GetString());
+        Assert.Equal("up", body.RootElement.GetProperty("checks").GetProperty("database").GetString());
+        Assert.Equal("up", body.RootElement.GetProperty("checks").GetProperty("cache").GetString());
+    }
+
     internal static async Task<string> LoginAsync(StalksvilleApiFactory factory)
     {
         using var client = factory.CreateClient();

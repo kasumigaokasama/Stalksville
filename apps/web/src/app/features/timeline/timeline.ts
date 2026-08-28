@@ -14,7 +14,23 @@ import { formatDateTime, formatRelative } from '../../shared/util/format';
 })
 export class Timeline {
   protected readonly entityFilter = signal<'all' | 'player' | 'clan'>('all');
-  protected readonly kindFilter = signal<'all' | 'observed' | 'derived'>('all');
+  protected readonly kindFilter = signal('all');
+  protected readonly typeFilter = signal('all');
+
+  /** Event types the API records (Domain TimelineEventTypes) — a stable filter list. */
+  protected readonly eventTypes = [
+    'PlayerDiscovered',
+    'PlayerReobserved',
+    'ClanChanged',
+    'LevelChanged',
+    'ProfileChanged',
+    'CosmeticsChanged',
+    'RankStateChanged',
+    'ClanImported',
+    'MembershipStarted',
+    'MembershipEnded',
+    'HighscoreRankChanged',
+  ] as const;
 
   private readonly events = httpResource<TimelineEventDto[]>(() => {
     const params = new URLSearchParams();
@@ -26,15 +42,15 @@ export class Timeline {
     } else if (this.kindFilter() === 'derived') {
       params.set('derived', 'true');
     }
+    if (this.typeFilter() !== 'all') {
+      params.set('eventType', this.typeFilter());
+    }
     params.set('limit', '200');
     return `/api/v1/timeline?${params.toString()}`;
   });
 
   protected readonly timeline = computed(() => (this.events.hasValue() ? this.events.value() ?? [] : []));
   protected readonly isLoading = computed(() => this.events.isLoading());
-
-  protected readonly eventTypes = computed(() =>
-    [...new Set(this.timeline().map((e) => e.eventType))].sort());
 
   protected readonly formatDateTime = formatDateTime;
   protected readonly formatRelative = formatRelative;

@@ -42,6 +42,12 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     ports:
       - "5099:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     depends_on:
       postgres:
         condition: service_healthy
@@ -83,7 +89,8 @@ services:
     ports:
       - "4200:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   stalksville-pgdata:

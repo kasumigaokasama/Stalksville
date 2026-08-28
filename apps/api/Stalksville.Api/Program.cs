@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
@@ -11,7 +12,9 @@ using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using Stalksville.Api.Middleware;
 using Stalksville.Application;
+using Stalksville.Application.Abstractions;
 using Stalksville.Infrastructure;
+using Stalksville.Infrastructure.Persistence;
 using Stalksville.Infrastructure.Seeding;
 using Stalksville.Api.Security;
 
@@ -132,6 +135,42 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers().RequireRateLimiting("api");
+
+// ---- Liveness/readiness probe (unauthenticated, unthrottled): DB + cache connectivity ----
+app.MapGet("/health", [AllowAnonymous] async (HttpContext context) =>
+{
+    using var scope = app.Services.CreateScope();
+    var provider = scope.ServiceProvider;
+
+    string database;
+    try
+    {
+        var db = provider.GetRequiredService<StalksvilleDbContext>();
+        database = await db.Database.CanConnectAsync(context.RequestAborted) ? "up" : "down";
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Health: database check failed: {ex.Message}");
+        database = "down";
+    }
+
+    string cache;
+    try
+    {
+        var cacheProvider = provider.GetRequiredService<ICacheProvider>();
+        await cacheProvider.SetAsync("health:ping", DateTimeOffset.UtcNow, TimeSpan.FromSeconds(10), context.RequestAborted);
+        cache = "up";
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Health: cache check failed: {ex.Message}");
+        cache = "down";
+    }
+
+    var healthy = database == "up" && cache == "up";
+    context.Response.StatusCode = healthy ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable;
+    return Results.Json(new { status = healthy ? "healthy" : "degraded", checks = new { database, cache } });
+});
 
 if (app.Environment.IsDevelopment())
 {

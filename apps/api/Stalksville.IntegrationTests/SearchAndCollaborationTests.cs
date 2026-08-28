@@ -129,4 +129,35 @@ public sealed class SearchAndCollaborationTests : IAsyncLifetime
         Assert.Contains("Stalksville Investigation Report", html);
         Assert.Contains("window.print", html);
     }
+
+    [Fact]
+    public async Task Archive_RBAC_ViewerForbidden_AnalystAllowed()
+    {
+        var created = await _client.PostAsJsonAsync("/api/v1/investigations", new { title = "RBAC archive case" });
+        created.EnsureSuccessStatusCode();
+        var id = JsonDocument.Parse(await created.Content.ReadAsStreamAsync())
+            .RootElement.GetProperty("investigation").GetProperty("id").GetGuid();
+
+        var viewerUsername = $"viewer-{Guid.NewGuid():N}"[..32];
+        var viewerPassword = $"viewer-{Guid.NewGuid():N}";
+        var userCreated = await _client.PostAsJsonAsync("/api/v1/admin/users",
+            new { username = viewerUsername, password = viewerPassword, role = "VIEWER" });
+        userCreated.EnsureSuccessStatusCode();
+        var login = await _client.PostAsJsonAsync("/api/v1/auth/login", new { username = viewerUsername, password = viewerPassword });
+        login.EnsureSuccessStatusCode();
+        var viewerToken = JsonDocument.Parse(await login.Content.ReadAsStreamAsync()).RootElement.GetProperty("token").GetString();
+
+        using var viewerClient = _factory.CreateClient();
+        viewerClient.DefaultRequestHeaders.Authorization = new("Bearer", viewerToken);
+        var viewerArchive = await viewerClient.PostAsync($"/api/v1/investigations/{id}/archive", content: null);
+        Assert.Equal(HttpStatusCode.Forbidden, viewerArchive.StatusCode);
+        var viewerReopen = await viewerClient.PostAsync($"/api/v1/investigations/{id}/reopen", content: null);
+        Assert.Equal(HttpStatusCode.Forbidden, viewerReopen.StatusCode);
+
+        // Analysts (and admins) may still change case status.
+        var archived = await _client.PostAsync($"/api/v1/investigations/{id}/archive", content: null);
+        Assert.Equal(HttpStatusCode.OK, archived.StatusCode);
+        var reopened = await _client.PostAsync($"/api/v1/investigations/{id}/reopen", content: null);
+        Assert.Equal(HttpStatusCode.OK, reopened.StatusCode);
+    }
 }

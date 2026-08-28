@@ -41,6 +41,20 @@ export class Alerts {
   protected readonly formatDateTime = formatDateTime;
   protected readonly formatRelative = formatRelative;
 
+  /** Route by entity type — alerts are not always about players. */
+  protected entityLink(alert: AlertDto): string {
+    switch (alert.entityType) {
+      case 'player':
+        return `/players/${alert.entityId}`;
+      case 'clan':
+        return `/clans/${alert.entityId}`;
+      case 'investigation':
+        return `/investigations/${alert.entityId}`;
+      default:
+        return '/dashboard';
+    }
+  }
+
   protected async markRead(alert: AlertDto): Promise<void> {
     if (alert.readAt) {
       return;

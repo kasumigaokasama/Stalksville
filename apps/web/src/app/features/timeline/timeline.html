@@ -15,6 +15,12 @@
         <option value="observed">Observed only</option>
         <option value="derived">Derived only</option>
       </select>
+      <select class="stl-input" [value]="typeFilter()" (change)="typeFilter.set($any($event.target).value)">
+        <option value="all">All event types</option>
+        @for (type of eventTypes; track type) {
+          <option [value]="type">{{ type }}</option>
+        }
+      </select>
     </div>
   </div>
 
