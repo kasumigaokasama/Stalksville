@@ -61,6 +61,11 @@ export const routes: Routes = [
         title: 'Stalksville — Timeline',
       },
       {
+        path: 'alerts',
+        loadComponent: () => import('./features/alerts/alerts').then((m) => m.Alerts),
+        title: 'Stalksville — Alerts',
+      },
+      {
         path: 'graph',
         loadComponent: () => import('./features/graph/graph').then((m) => m.Graph),
         title: 'Stalksville — Graph',

@@ -189,6 +189,38 @@ export interface TimelineEventDto {
   confidence: number | null;
 }
 
+export interface AlertEvidenceChangeDto {
+  id: string;
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+  fromSnapshotId: string | null;
+  toSnapshotId: string;
+}
+
+export interface AlertEvidenceDto {
+  playerId: string;
+  changes: AlertEvidenceChangeDto[];
+}
+
+export interface AlertDto {
+  id: string;
+  kind: string;
+  severity: 'info' | 'notice' | 'warning';
+  entityType: string;
+  entityId: string;
+  entityTitle: string;
+  title: string;
+  body: string;
+  evidence: AlertEvidenceDto | null;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface UnreadCountDto {
+  unread: number;
+}
+
 export interface InvestigationSummaryDto {
   id: string;
   caseNumber: number;

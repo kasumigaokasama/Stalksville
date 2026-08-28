@@ -87,6 +87,36 @@ public sealed record TimelineEventDto(
     bool IsDerived,
     double? Confidence);
 
+// ---- Alerts (derived) ----
+
+/// <summary>Evidence block of an alert: the change ids and snapshots that justify it.</summary>
+public sealed record AlertEvidenceDto(
+    Guid PlayerId,
+    IReadOnlyList<AlertEvidenceChangeDto> Changes);
+
+public sealed record AlertEvidenceChangeDto(
+    Guid Id,
+    string Field,
+    string? OldValue,
+    string? NewValue,
+    Guid? FromSnapshotId,
+    Guid ToSnapshotId);
+
+public sealed record AlertDto(
+    Guid Id,
+    string Kind,
+    string Severity,
+    string EntityType,
+    Guid EntityId,
+    string EntityTitle,
+    string Title,
+    string Body,
+    AlertEvidenceDto? Evidence,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ReadAt);
+
+public sealed record UnreadCountDto(int Unread);
+
 public sealed record DerivedDto(
     int TotalChanges,
     IReadOnlyList<ChangeDto> RecentChanges,

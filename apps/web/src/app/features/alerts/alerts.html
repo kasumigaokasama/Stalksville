@@ -1,0 +1,72 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Alerts</h1>
+      <div class="stl-subtitle">Derived intelligence worth a look — every alert links to the change records that produced it.</div>
+    </div>
+    <div class="filters">
+      <label class="stl-check">
+        <input type="checkbox" [checked]="showUnreadOnly()" (change)="showUnreadOnly.set($any($event.target).checked)" />
+        unread only
+      </label>
+      <select class="stl-input" [value]="kindFilter()" (change)="kindFilter.set($any($event.target).value)">
+        <option value="all">All kinds</option>
+        @for (kind of kinds(); track kind) {
+          <option [value]="kind">{{ kind }}</option>
+        }
+      </select>
+      <button class="stl-button" type="button" [disabled]="busy() || alerts().length === 0" (click)="markAllRead()">
+        Mark all read
+      </button>
+    </div>
+  </div>
+
+  <section class="stl-card">
+    @if (isLoading()) {
+      <div class="stl-empty">Loading alerts…</div>
+    } @else if (alerts().length === 0) {
+      <div class="stl-empty">No alerts — nothing identity-relevant has moved since you last looked.</div>
+    } @else {
+      <ul class="alert-list">
+        @for (alert of alerts(); track alert.id) {
+          <li class="alert-item" [class.unread]="!alert.readAt">
+            <span class="stl-tag" [class.stl-tag--success]="alert.severity === 'info'"
+                  [class.stl-tag--warning]="alert.severity === 'notice'"
+                  [class.stl-tag--danger]="alert.severity === 'warning'">
+              {{ alert.severity }}
+            </span>
+            <div class="alert-body">
+              <div class="alert-title">
+                <span class="kind mono">{{ alert.kind }}</span>
+                <strong>{{ alert.title }}</strong>
+                @if (!alert.readAt) {
+                  <span class="unread-dot" title="unread"></span>
+                }
+              </div>
+              <p>{{ alert.body }}</p>
+              @if (alert.evidence; as evidence) {
+                <div class="evidence">
+                  <span class="stl-tag stl-tag--derived">evidence</span>
+                  @for (change of evidence.changes; track change.id) {
+                    <span class="evidence-change mono">
+                      {{ change.field }}: {{ change.oldValue ?? '—' }} → {{ change.newValue ?? '—' }}
+                    </span>
+                  }
+                </div>
+              }
+              <div class="alert-meta">
+                <a [routerLink]="['/players', alert.entityId]">{{ alert.entityTitle }}</a>
+                <span class="when mono" [title]="formatDateTime(alert.createdAt)">{{ formatRelative(alert.createdAt) }}</span>
+                @if (!alert.readAt) {
+                  <button class="stl-button small" type="button" [disabled]="busy()" (click)="markRead(alert)">Mark read</button>
+                } @else {
+                  <span class="read-at">read</span>
+                }
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>

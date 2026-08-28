@@ -3,6 +3,7 @@ import { Component, HostListener, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../auth/auth';
+import { UnreadAlerts } from '../alerts/unread-alerts';
 import { CommandPalette, type PaletteAction } from './command-palette';
 
 @Component({
@@ -15,6 +16,7 @@ export class Shell {
   private readonly dialog = inject(Dialog);
 
   protected readonly auth = inject(AuthService);
+  protected readonly unreadAlerts = inject(UnreadAlerts);
 
   protected readonly nav = [
     { path: '/dashboard', label: 'Overview' },
@@ -23,6 +25,7 @@ export class Shell {
     { path: '/investigations', label: 'Investigations' },
     { path: '/graph', label: 'Graph' },
     { path: '/timeline', label: 'Timeline' },
+    { path: '/alerts', label: 'Alerts' },
     { path: '/analytics', label: 'Analytics' },
     { path: '/settings', label: 'Settings' },
   ];

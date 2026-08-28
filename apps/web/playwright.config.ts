@@ -33,6 +33,9 @@ export default defineConfig({
   timeout: 45_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
+  // One worker: specs share a persistent database and one mock Wolvesville whose data mutates
+  // per fetch, so parallel files race each other (e.g. two specs refreshing the same player).
+  workers: 1,
   retries: 0,
   reporter: [['list']],
   use: {

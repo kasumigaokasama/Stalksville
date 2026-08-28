@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Stalksville.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using Stalksville.Infrastructure.Persistence;
 namespace Stalksville.Infrastructure.Migrations
 {
     [DbContext(typeof(StalksvilleDbContext))]
-    partial class StalksvilleDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260828151345_AddAlerts")]
+    partial class AddAlerts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

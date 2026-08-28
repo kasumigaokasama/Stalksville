@@ -58,8 +58,9 @@ test.describe('Operations: AI explain, exports, RBAC (mock Wolvesville)', () => 
     });
     expect([201, 409]).toContain(created.status()); // 409 when the viewer already exists.
 
-    // Sign out and back in as the viewer.
+    // Sign out and back in as the viewer (fresh load so the form state is deterministic).
     await page.getByRole('button', { name: 'Sign out' }).click();
+    await page.goto('/login');
     await page.getByLabel('Username').fill('spectator');
     await page.getByLabel('Password').fill(viewerPassword);
     await page.getByRole('button', { name: 'Sign in' }).click();

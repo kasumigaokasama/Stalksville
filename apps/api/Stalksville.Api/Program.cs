@@ -65,6 +65,9 @@ builder.Services.AddAuthorization(options =>
 });
 
 // ---- Internal rate limiting: 100 requests / minute / user ----
+// Development (and the e2e suite) legitimately bursts far higher than a human analyst,
+// so the window is relaxed there; production keeps the strict limit.
+var rateLimitPerWindow = builder.Environment.IsDevelopment() ? 1_000 : 100;
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -75,7 +78,7 @@ builder.Services.AddRateLimiter(options =>
                 ?? "anonymous",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 100,
+                PermitLimit = rateLimitPerWindow,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));

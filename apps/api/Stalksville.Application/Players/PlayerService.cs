@@ -18,6 +18,7 @@ public sealed class PlayerService(
     IPlayerStore players,
     IClanStore clans,
     IDerivationStore derivations,
+    IAlertStore alerts,
     IAuditLog audit,
     ILogger<PlayerService> logger)
 {
@@ -150,6 +151,13 @@ public sealed class PlayerService(
                     await players.AddChangesAsync(changeEntities, cancellationToken);
                     await derivations.AddEvidenceRangeAsync(changeEntities.SelectMany(c => EvidenceForChange(c, latest, snapshot)).ToList(), cancellationToken);
                     timelineEvents.AddRange(TimelineForChanges(player.Id, fieldChanges, latest, snapshot, now));
+
+                    // Alerts are derived from the same change records, transactionally with them.
+                    var candidates = AlertEngine.Evaluate(player.Id, state.Username, changeEntities, now);
+                    if (candidates.Count > 0)
+                    {
+                        await alerts.AddIfNewAsync(candidates, EntityType.Player, player.Id, state.Username, now, cancellationToken);
+                    }
                 }
             }
         }

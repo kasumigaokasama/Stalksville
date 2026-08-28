@@ -9,6 +9,9 @@
       @for (item of nav; track item.path) {
         <a [routerLink]="item.path" routerLinkActive="active">
           {{ item.label }}
+          @if (item.path === '/alerts' && unreadAlerts.unread() > 0; ) {
+            <span class="nav-badge">{{ unreadAlerts.unread() > 99 ? '99+' : unreadAlerts.unread() }}</span>
+          }
         </a>
       }
     </nav>

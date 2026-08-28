@@ -33,6 +33,8 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
 
     public DbSet<InvestigationNote> InvestigationNotes => Set<InvestigationNote>();
 
+    public DbSet<Alert> Alerts => Set<Alert>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -190,6 +192,22 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.HasOne(x => x.Investigation)
                 .WithMany(i => i.Notes)
                 .HasForeignKey(x => x.InvestigationId);
+        });
+
+        modelBuilder.Entity<Alert>(e =>
+        {
+            e.ToTable("alerts");
+            e.Property(x => x.EntityType).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.EntityTitle).HasMaxLength(64);
+            e.Property(x => x.Kind).HasMaxLength(32);
+            e.Property(x => x.Severity).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Title).HasMaxLength(160);
+            e.Property(x => x.Body).HasMaxLength(1024);
+            e.Property(x => x.Evidence).HasColumnType("jsonb");
+            e.Property(x => x.DedupeKey).HasMaxLength(128);
+            e.HasIndex(x => x.DedupeKey).IsUnique();
+            e.HasIndex(x => new { x.EntityType, x.EntityId, x.CreatedAt });
+            e.HasIndex(x => x.ReadAt);
         });
     }
 }
