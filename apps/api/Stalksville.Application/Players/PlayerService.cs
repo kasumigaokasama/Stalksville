@@ -210,7 +210,7 @@ public sealed class PlayerService(
             observed = ToObservedDto(state, latest, iconName);
         }
 
-        var changes = await players.GetChangesAsync(player.Id, limit: 50, cancellationToken);
+        var changes = await players.GetChangesAsync(player.Id, limit: 50, cancellationToken: cancellationToken);
         var totalChanges = await players.CountChangesForPlayerAsync(player.Id, cancellationToken);
         var evidence = await derivations.GetEvidenceForAsync("playerChange", changes.Select(c => c.Id).ToList(), cancellationToken);
         var changeDtos = changes.Select(c => ToChangeDto(c, evidence.GetValueOrDefault(c.Id) ?? [])).ToList();
@@ -263,13 +263,15 @@ public sealed class PlayerService(
         return await ToSummariesAsync(results, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<SnapshotDto>> GetSnapshotsAsync(Guid playerId, CancellationToken cancellationToken = default)
+    public async Task<(int Total, IReadOnlyList<SnapshotDto> Snapshots)> GetSnapshotsAsync(
+        Guid playerId, int limit = 50, int offset = 0, CancellationToken cancellationToken = default)
     {
         var player = await players.FindByIdAsync(playerId, cancellationToken)
             ?? throw new EntityNotFoundException("player", playerId);
 
-        var snapshots = await players.GetSnapshotsAsync(player.Id, cancellationToken: cancellationToken);
-        return snapshots.Select(s => new SnapshotDto(s.Id, s.CapturedAt, s.LastObservedAt, s.ObservationCount, s.PayloadHash, s.Source)).ToList();
+        var total = await players.CountSnapshotsForPlayerAsync(player.Id, cancellationToken);
+        var snapshots = await players.GetSnapshotsAsync(player.Id, limit, offset, cancellationToken);
+        return (total, snapshots.Select(s => new SnapshotDto(s.Id, s.CapturedAt, s.LastObservedAt, s.ObservationCount, s.PayloadHash, s.Source)).ToList());
     }
 
     /// <summary>
@@ -293,7 +295,7 @@ public sealed class PlayerService(
         var player = await players.FindByIdAsync(playerId, cancellationToken)
             ?? throw new EntityNotFoundException("player", playerId);
 
-        var history = await players.GetSnapshotHistoryAsync(player.Id, cancellationToken);
+        var history = await players.GetSnapshotHistoryAsync(player.Id, cancellationToken: cancellationToken);
         var points = new List<ProgressionPointDto>();
 
         foreach (var snapshot in history)
@@ -316,13 +318,13 @@ public sealed class PlayerService(
     }
 
     /// <summary>Change history for a player, including the evidence rows backing each change.</summary>
-    public async Task<(int Total, IReadOnlyList<ChangeDto> Changes)> GetChangesAsync(Guid playerId, CancellationToken cancellationToken = default)
+    public async Task<(int Total, IReadOnlyList<ChangeDto> Changes)> GetChangesAsync(Guid playerId, int limit = 100, int offset = 0, CancellationToken cancellationToken = default)
     {
         var player = await players.FindByIdAsync(playerId, cancellationToken)
             ?? throw new EntityNotFoundException("player", playerId);
 
         var total = await players.CountChangesForPlayerAsync(player.Id, cancellationToken);
-        var changes = await players.GetChangesAsync(player.Id, limit: 100, cancellationToken);
+        var changes = await players.GetChangesAsync(player.Id, limit, offset, cancellationToken);
         var evidence = await derivations.GetEvidenceForAsync("playerChange", changes.Select(c => c.Id).ToList(), cancellationToken);
 
         return (total, changes.Select(c => ToChangeDto(c, evidence.GetValueOrDefault(c.Id) ?? [])).ToList());

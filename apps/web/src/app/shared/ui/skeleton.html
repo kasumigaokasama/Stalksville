@@ -1,0 +1,3 @@
+@for (line of rows(); track line; let last = $last) {
+  <div class="skeleton-row" [style.width.%]="last ? 55 : 90"></div>
+}

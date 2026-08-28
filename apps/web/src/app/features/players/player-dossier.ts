@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { httpResource } from '@angular/common/http';
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Dialog } from '@angular/cdk/dialog';
+import { Component, computed, ElementRef, inject, input, signal, viewChildren } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -16,6 +17,7 @@ import {
   SnapshotDto,
 } from '../../core/api/api.model';
 import { fieldLabel, formatDateTime, formatNumber, formatRelative } from '../../shared/util/format';
+import { EraseConfirm } from './erase-confirm';
 import { ProgressionChart } from './progression-chart';
 
 type Tab = 'overview' | 'identity' | 'clans' | 'progression' | 'snapshots' | 'changes' | 'intelligence';
@@ -30,6 +32,7 @@ type Tab = 'overview' | 'identity' | 'clans' | 'progression' | 'snapshots' | 'ch
 export class PlayerDossier {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly dialog = inject(Dialog);
   protected readonly auth = inject(AuthService);
   protected readonly catalog = inject(Catalog);
 
@@ -68,6 +71,34 @@ export class PlayerDossier {
     { key: 'changes', label: 'Changes' },
     { key: 'intelligence', label: 'Intelligence' },
   ];
+
+  private readonly tabButtons = viewChildren<ElementRef<HTMLButtonElement>>('tabButton');
+
+  /** Arrow/Home/End keyboard navigation across the dossier tabs (roving tabindex). */
+  protected onTabKey(event: KeyboardEvent): void {
+    const keys = this.tabs.map((t) => t.key);
+    const current = keys.indexOf(this.tab());
+    let next = -1;
+    switch (event.key) {
+      case 'ArrowRight':
+        next = (current + 1) % keys.length;
+        break;
+      case 'ArrowLeft':
+        next = (current - 1 + keys.length) % keys.length;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = keys.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    this.tab.set(keys[next]);
+    this.tabButtons()[next]?.nativeElement.focus();
+  }
 
   protected refresh(): void {
     if (this.refreshing()) {
@@ -109,8 +140,15 @@ export class PlayerDossier {
       return;
     }
 
-    const reason = window.prompt(
-      `Erase "${player.username}" and ALL tracked data (snapshots, changes, relationships, alerts)?\n\nThis cannot be undone and only affects Stalksville's database. Enter a reason for the audit log:`,
+    const reason = await firstValueFrom(
+      this.dialog
+        .open<string, { username: string }, EraseConfirm>(EraseConfirm, {
+          hasBackdrop: true,
+          panelClass: 'stl-dialog-panel',
+          width: '460px',
+          data: { username: player.username },
+        })
+        .closed,
     );
     if (!reason) {
       return;

@@ -56,8 +56,20 @@ public sealed class AlertStore(StalksvilleDbContext db) : IAlertStore
 
     public async Task<IReadOnlyList<Alert>> ListAsync(AlertFilter filter, CancellationToken cancellationToken = default)
     {
-        IQueryable<Alert> query = db.Alerts.AsNoTracking();
+        var query = ApplyFilter(db.Alerts.AsNoTracking().AsQueryable(), filter);
 
+        return await query
+            .OrderByDescending(a => a.CreatedAt)
+            .Skip(Math.Max(0, filter.Offset))
+            .Take(Math.Clamp(filter.Limit, 1, 500))
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountAsync(AlertFilter filter, CancellationToken cancellationToken = default)
+        => ApplyFilter(db.Alerts.AsNoTracking().AsQueryable(), filter).CountAsync(cancellationToken);
+
+    private static IQueryable<Alert> ApplyFilter(IQueryable<Alert> query, AlertFilter filter)
+    {
         if (filter.UnreadOnly == true)
         {
             query = query.Where(a => a.ReadAt == null);
@@ -73,10 +85,7 @@ public sealed class AlertStore(StalksvilleDbContext db) : IAlertStore
             query = query.Where(a => a.EntityId == entityId);
         }
 
-        return await query
-            .OrderByDescending(a => a.CreatedAt)
-            .Take(Math.Clamp(filter.Limit, 1, 500))
-            .ToListAsync(cancellationToken);
+        return query;
     }
 
     public Task<int> CountUnreadAsync(CancellationToken cancellationToken = default)

@@ -108,16 +108,26 @@ public sealed class PlayersController(PlayerService players, PlayerIntelligenceS
 
     [HttpGet("{id:guid}/snapshots")]
     [ProducesResponseType<IReadOnlyList<SnapshotDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetSnapshots(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetSnapshots(
+        Guid id,
+        [FromQuery] int limit = 50,
+        [FromQuery] int offset = 0,
+        CancellationToken cancellationToken = default)
     {
-        return Ok(await players.GetSnapshotsAsync(id, cancellationToken));
+        var (total, snapshots) = await players.GetSnapshotsAsync(id, limit, offset, cancellationToken);
+        Response.Headers["X-Total-Count"] = total.ToString();
+        return Ok(snapshots);
     }
 
     [HttpGet("{id:guid}/changes")]
     [ProducesResponseType<IReadOnlyList<ChangeDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetChanges(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetChanges(
+        Guid id,
+        [FromQuery] int limit = 100,
+        [FromQuery] int offset = 0,
+        CancellationToken cancellationToken = default)
     {
-        var (total, changes) = await players.GetChangesAsync(id, cancellationToken);
+        var (total, changes) = await players.GetChangesAsync(id, limit, offset, cancellationToken);
         Response.Headers["X-Total-Count"] = total.ToString();
         return Ok(changes);
     }

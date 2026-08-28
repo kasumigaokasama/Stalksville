@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './core/auth/auth-guard';
+import { adminGuard, authGuard } from './core/auth/auth-guard';
 import { Shell } from './core/layout/shell';
 
 export const routes: Routes = [
@@ -89,6 +89,12 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () => import('./features/settings/settings').then((m) => m.Settings),
         title: 'Stalksville — Settings',
+      },
+      {
+        path: 'admin',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/admin').then((m) => m.Admin),
+        title: 'Stalksville — Admin',
       },
     ],
   },

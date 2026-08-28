@@ -30,10 +30,13 @@ public sealed class InvestigationStore(StalksvilleDbContext db) : IInvestigation
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<InvestigationListItem>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<InvestigationListItem>> ListAsync(bool includeArchived, int limit = 100, int offset = 0, CancellationToken cancellationToken = default)
     {
         var investigations = await db.Investigations
+            .Where(i => includeArchived || i.Status == InvestigationStatus.Active)
             .OrderByDescending(i => i.UpdatedAt)
+            .Skip(Math.Max(0, offset))
+            .Take(Math.Clamp(limit, 1, 200))
             .ToListAsync(cancellationToken);
 
         if (investigations.Count == 0)
@@ -55,13 +58,15 @@ public sealed class InvestigationStore(StalksvilleDbContext db) : IInvestigation
             .ToDictionaryAsync(x => x.Key, x => x.Count, cancellationToken);
 
         return investigations
-            .Where(i => includeArchived || i.Status == InvestigationStatus.Active)
             .Select(i => new InvestigationListItem(
                 i,
                 targetCounts.GetValueOrDefault(i.Id),
                 noteCounts.GetValueOrDefault(i.Id)))
             .ToList();
     }
+
+    public Task<int> CountAsync(bool includeArchived, CancellationToken cancellationToken = default)
+        => db.Investigations.CountAsync(i => includeArchived || i.Status == InvestigationStatus.Active, cancellationToken);
 
     public Task<Investigation?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => db.Investigations.FirstOrDefaultAsync(i => i.Id == id, cancellationToken);

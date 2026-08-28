@@ -28,6 +28,9 @@ if (process.env.STALKSVILLE_E2E_ADMIN_PASSWORD) {
 }
 process.env.E2E_ADMIN_PASSWORD = e2eAdminPassword;
 
+// Port override for machines where 4200 is already serving something else.
+const e2ePort = Number(process.env.STALKSVILLE_E2E_PORT ?? 4200);
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 45_000,
@@ -39,7 +42,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:4200',
+    baseURL: `http://localhost:${e2ePort}`,
     trace: 'off',
   },
   // NOTE: Playwright starts webServers BEFORE globalSetup, so a DB reset in globalSetup would
@@ -67,8 +70,8 @@ export default defineConfig({
       },
     },
     {
-      command: 'npx ng serve --port 4200',
-      url: 'http://localhost:4200',
+      command: `npx ng serve --port ${e2ePort}`,
+      url: `http://localhost:${e2ePort}`,
       reuseExistingServer: true,
       timeout: 180_000,
     },

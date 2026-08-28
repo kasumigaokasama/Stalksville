@@ -5,17 +5,23 @@
       <div class="stl-subtitle">Every observation and derivation, newest first.</div>
     </div>
     <div class="filters">
-      <select class="stl-input" [value]="entityFilter()" (change)="entityFilter.set($any($event.target).value)">
+      <label class="visually-hidden" for="timeline-entity">Filter by entity</label>
+      <select id="timeline-entity" class="stl-input" [value]="entityFilter()"
+              (change)="entityFilter.set($any($event.target).value); reload()">
         <option value="all">All entities</option>
         <option value="player">Players</option>
         <option value="clan">Clans</option>
       </select>
-      <select class="stl-input" [value]="kindFilter()" (change)="kindFilter.set($any($event.target).value)">
+      <label class="visually-hidden" for="timeline-kind">Filter by observation kind</label>
+      <select id="timeline-kind" class="stl-input" [value]="kindFilter()"
+              (change)="kindFilter.set($any($event.target).value); reload()">
         <option value="all">Observed + derived</option>
         <option value="observed">Observed only</option>
         <option value="derived">Derived only</option>
       </select>
-      <select class="stl-input" [value]="typeFilter()" (change)="typeFilter.set($any($event.target).value)">
+      <label class="visually-hidden" for="timeline-type">Filter by event type</label>
+      <select id="timeline-type" class="stl-input" [value]="typeFilter()"
+              (change)="typeFilter.set($any($event.target).value); reload()">
         <option value="all">All event types</option>
         @for (type of eventTypes; track type) {
           <option [value]="type">{{ type }}</option>
@@ -25,15 +31,15 @@
   </div>
 
   <section class="stl-card">
-    @if (isLoading()) {
-      <div class="stl-empty">Loading timeline…</div>
-    } @else if (timeline().length === 0) {
+    @if (!initialized()) {
+      <stl-skeleton [lines]="8" />
+    } @else if (rows().length === 0) {
       <div class="stl-empty">
         No events recorded yet — look up a player and refresh them later to generate changes.
       </div>
     } @else {
       <ol class="timeline-list">
-        @for (event of timeline(); track event.id) {
+        @for (event of rows(); track event.id) {
           <li class="timeline-item">
             <span class="when mono" [title]="formatDateTime(event.occurredAt)">{{ formatRelative(event.occurredAt) }}</span>
             <span class="stl-tag" [class.stl-tag--derived]="event.isDerived" [class.stl-tag--observed]="!event.isDerived">
@@ -47,6 +53,11 @@
           </li>
         }
       </ol>
+      @if (hasMore()) {
+        <button class="stl-button small" type="button" [disabled]="loading()" (click)="loadMore()">
+          {{ loading() ? 'Loading…' : 'Load more' }}
+        </button>
+      }
     }
   </section>
 </div>

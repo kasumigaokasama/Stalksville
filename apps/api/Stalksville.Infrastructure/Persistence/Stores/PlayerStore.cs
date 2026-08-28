@@ -91,19 +91,27 @@ public sealed class PlayerStore(StalksvilleDbContext db) : IPlayerStore
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<PlayerSnapshot>> GetSnapshotsAsync(Guid playerId, int limit = 50, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PlayerSnapshot>> GetSnapshotsAsync(Guid playerId, int limit = 50, int offset = 0, CancellationToken cancellationToken = default)
         => await db.PlayerSnapshots
             .Where(s => s.PlayerId == playerId)
             .OrderByDescending(s => s.CapturedAt)
-            .Take(limit)
+            .Skip(Math.Max(0, offset))
+            .Take(Math.Clamp(limit, 1, 500))
             .ToListAsync(cancellationToken);
 
-    /// <summary>Full snapshot history, oldest first — progression charts read the whole series.</summary>
-    public async Task<IReadOnlyList<PlayerSnapshot>> GetSnapshotHistoryAsync(Guid playerId, CancellationToken cancellationToken = default)
-        => await db.PlayerSnapshots
+    /// <summary>Bounded history for progression charts: newest <paramref name="maxEntries"/>, returned oldest first.</summary>
+    public async Task<IReadOnlyList<PlayerSnapshot>> GetSnapshotHistoryAsync(Guid playerId, int maxEntries = 500, CancellationToken cancellationToken = default)
+    {
+        var newest = await db.PlayerSnapshots
             .Where(s => s.PlayerId == playerId)
-            .OrderBy(s => s.CapturedAt)
+            .OrderByDescending(s => s.CapturedAt)
+            .Take(Math.Clamp(maxEntries, 1, 2_000))
+            .Select(s => new { s.CapturedAt, s.Payload })
             .ToListAsync(cancellationToken);
+
+        newest.Reverse();
+        return [.. newest.Select(x => new PlayerSnapshot { CapturedAt = x.CapturedAt, Payload = x.Payload, PayloadHash = string.Empty, Source = string.Empty })];
+    }
 
     public async Task EraseAllDataAsync(Guid playerId, string username, string reason, string actor, CancellationToken cancellationToken = default)
     {
@@ -143,11 +151,12 @@ public sealed class PlayerStore(StalksvilleDbContext db) : IPlayerStore
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<PlayerChange>> GetChangesAsync(Guid playerId, int limit = 100, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PlayerChange>> GetChangesAsync(Guid playerId, int limit = 100, int offset = 0, CancellationToken cancellationToken = default)
         => await db.PlayerChanges
             .Where(c => c.PlayerId == playerId)
             .OrderByDescending(c => c.DetectedAt)
-            .Take(limit)
+            .Skip(Math.Max(0, offset))
+            .Take(Math.Clamp(limit, 1, 500))
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<ChangeWithPlayer>> GetRecentChangesAsync(int limit = 10, CancellationToken cancellationToken = default)

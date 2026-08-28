@@ -15,6 +15,23 @@
   }
 }
 
+.title-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: min(420px, 100%);
+
+  .edit-actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.edit-title {
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
 .narrative-card {
   margin-bottom: 16px;
 

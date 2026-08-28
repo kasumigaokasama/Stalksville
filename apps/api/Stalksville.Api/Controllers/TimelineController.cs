@@ -17,6 +17,7 @@ public sealed class TimelineController(IDerivationStore derivations) : Controlle
         [FromQuery] string? eventType,
         [FromQuery] bool? derived,
         [FromQuery] int limit = 100,
+        [FromQuery] int offset = 0,
         CancellationToken cancellationToken = default)
     {
         EntityType? entityType = entity?.Trim().ToLowerInvariant() switch
@@ -27,9 +28,10 @@ public sealed class TimelineController(IDerivationStore derivations) : Controlle
             _ => throw new ArgumentException($"entity filter must be 'player' or 'clan', got '{entity}'.")
         };
 
-        var events = await derivations.GetFilteredTimelineAsync(
-            new TimelineFilter(entityType, null, string.IsNullOrWhiteSpace(eventType) ? null : eventType, derived, limit),
-            cancellationToken);
+        var filter = new TimelineFilter(entityType, null, string.IsNullOrWhiteSpace(eventType) ? null : eventType, derived, limit, offset);
+
+        var events = await derivations.GetFilteredTimelineAsync(filter, cancellationToken);
+        Response.Headers["X-Total-Count"] = (await derivations.CountTimelineAsync(filter, cancellationToken)).ToString();
 
         return Ok(events.Select(e => new TimelineEventDto(
             e.Id,

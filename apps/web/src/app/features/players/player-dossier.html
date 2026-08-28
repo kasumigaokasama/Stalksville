@@ -27,9 +27,12 @@
       </div>
     </div>
 
-    <nav class="tabs" role="tablist">
+    <nav class="tabs" role="tablist" aria-label="Dossier sections" (keydown)="onTabKey($event)">
       @for (t of tabs; track t.key) {
-        <button type="button" role="tab" [class.active]="tab() === t.key" (click)="tab.set(t.key)">
+        <button #tabButton type="button" role="tab" [class.active]="tab() === t.key"
+                [id]="'dossier-tab-' + t.key" [attr.aria-selected]="tab() === t.key"
+                [attr.tabindex]="tab() === t.key ? 0 : -1"
+                (click)="tab.set(t.key)">
           {{ t.label }}
           @switch (t.key) {
             @case ('changes') { <span class="count">{{ d.derived.totalChanges }}</span> }
@@ -40,6 +43,7 @@
       }
     </nav>
 
+    <div class="tab-content" role="tabpanel" [attr.aria-labelledby]="'dossier-tab-' + tab()" tabindex="0">
     @switch (tab()) {
       @case ('overview') {
         <div class="overview-grid">
@@ -295,5 +299,6 @@
         </div>
       }
     }
+    </div>
   }
 </div>

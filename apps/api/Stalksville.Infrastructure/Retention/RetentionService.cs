@@ -40,8 +40,14 @@ public sealed class RetentionService(StalksvilleDbContext db, ILogger<RetentionS
             return 0;
         }
 
-        await db.PlayerSnapshots.Where(s => deletable.Contains(s.Id)).ExecuteDeleteAsync(cancellationToken);
-        logger.LogInformation("Retention pruned {Count} snapshot(s) older than {Days} day(s)", deletable.Count, retentionDays);
-        return deletable.Count;
+        // Chunked deletes keep each statement bounded on very large histories.
+        var deleted = 0;
+        foreach (var batch in deletable.Chunk(500))
+        {
+            deleted += await db.PlayerSnapshots.Where(s => batch.Contains(s.Id)).ExecuteDeleteAsync(cancellationToken);
+        }
+
+        logger.LogInformation("Retention pruned {Count} snapshot(s) older than {Days} day(s)", deleted, retentionDays);
+        return deleted;
     }
 }

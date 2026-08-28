@@ -8,7 +8,8 @@ public sealed record TimelineFilter(
     Guid? EntityId = null,
     string? EventType = null,
     bool? IsDerived = null,
-    int Limit = 100);
+    int Limit = 100,
+    int Offset = 0);
 
 /// <summary>Persistence port for derived intelligence: relationships, evidence and timeline events.</summary>
 public interface IDerivationStore
@@ -25,6 +26,9 @@ public interface IDerivationStore
     Task<IReadOnlyList<TimelineEvent>> GetRecentTimelineAsync(int limit = 20, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<TimelineEvent>> GetFilteredTimelineAsync(TimelineFilter filter, CancellationToken cancellationToken = default);
+
+    /// <summary>Total events matching the filter (for pagination headers).</summary>
+    Task<int> CountTimelineAsync(TimelineFilter filter, CancellationToken cancellationToken = default);
 
     Task AddEvidenceRangeAsync(IReadOnlyList<Evidence> evidence, CancellationToken cancellationToken = default);
 

@@ -12,6 +12,38 @@ export interface LoginResponse {
   user: UserDto;
 }
 
+export interface AdminUserDto {
+  id: string;
+  username: string;
+  role: string;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
+export interface ApiKeyDto {
+  id: string;
+  name: string;
+  prefix: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+}
+
+export interface CreatedApiKeyDto {
+  key: ApiKeyDto;
+  apiKey: string;
+}
+
+export interface AuditEntryDto {
+  id: string;
+  userId: string | null;
+  username: string | null;
+  action: string;
+  target: string | null;
+  details: string | null;
+  occurredAt: string;
+}
+
 export interface PlayerSummaryDto {
   id: string;
   wolvesvillePlayerId: string;

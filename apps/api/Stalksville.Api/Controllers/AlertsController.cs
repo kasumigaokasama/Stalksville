@@ -20,15 +20,18 @@ public sealed class AlertsController(IAlertStore alerts) : ControllerBase
         [FromQuery] string? kind,
         [FromQuery] Guid? entityId,
         [FromQuery] int limit = 100,
+        [FromQuery] int offset = 0,
         CancellationToken cancellationToken = default)
     {
         var filter = new AlertFilter(
             UnreadOnly: unreadOnly,
             Kind: string.IsNullOrWhiteSpace(kind) ? null : kind,
             EntityId: entityId,
-            Limit: limit);
+            Limit: limit,
+            Offset: offset);
 
         var list = await alerts.ListAsync(filter, cancellationToken);
+        Response.Headers["X-Total-Count"] = (await alerts.CountAsync(filter, cancellationToken)).ToString();
         return Ok(list.Select(ToDto).ToList());
     }
 

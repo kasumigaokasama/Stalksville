@@ -8,7 +8,8 @@ public sealed record AlertFilter(
     bool? UnreadOnly = null,
     string? Kind = null,
     Guid? EntityId = null,
-    int Limit = 100);
+    int Limit = 100,
+    int Offset = 0);
 
 /// <summary>Persistence port for derived intelligence alerts.</summary>
 public interface IAlertStore
@@ -17,6 +18,9 @@ public interface IAlertStore
     Task<IReadOnlyList<Alert>> AddIfNewAsync(IReadOnlyList<AlertCandidate> candidates, EntityType entityType, Guid entityId, string entityTitle, DateTimeOffset createdAt, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Alert>> ListAsync(AlertFilter filter, CancellationToken cancellationToken = default);
+
+    /// <summary>Total alerts matching the filter (for pagination headers).</summary>
+    Task<int> CountAsync(AlertFilter filter, CancellationToken cancellationToken = default);
 
     Task<int> CountUnreadAsync(CancellationToken cancellationToken = default);
 

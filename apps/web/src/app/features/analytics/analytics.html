@@ -4,7 +4,8 @@
       <h1>Analytics</h1>
       <div class="stl-subtitle">Observed activity over time — all series are derived aggregates.</div>
     </div>
-    <select class="stl-input range" [value]="days()" (change)="days.set(+$any($event.target).value)">
+    <label class="visually-hidden" for="analytics-range">Time window</label>
+    <select id="analytics-range" class="stl-input range" [value]="days()" (change)="days.set(+$any($event.target).value)">
       <option value="7">Last 7 days</option>
       <option value="30">Last 30 days</option>
       <option value="90">Last 90 days</option>
@@ -12,7 +13,14 @@
   </div>
 
   @if (isLoading() && !summary()) {
-    <div class="stl-empty">Loading…</div>
+    <section class="stl-card">
+      <stl-skeleton [lines]="6" />
+    </section>
+  } @else if (failed()) {
+    <section class="stl-card">
+      <div class="stl-empty">Analytics failed to load.</div>
+      <button class="stl-button small" type="button" (click)="retry()">Retry</button>
+    </section>
   } @else if (summary(); as s) {
     <div class="stat-cards">
       @for (card of cards(); track card.label) {

@@ -84,10 +84,12 @@ public sealed class InvestigationService(
         return await GetWorkspaceAsync(investigation.Id, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<InvestigationSummaryDto>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default)
+    public async Task<(int Total, IReadOnlyList<InvestigationSummaryDto> Items)> ListAsync(
+        bool includeArchived, int limit = 100, int offset = 0, CancellationToken cancellationToken = default)
     {
-        var items = await investigations.ListAsync(includeArchived, cancellationToken);
-        return items.Select(i => ToSummary(i.Investigation, i.TargetCount, i.NoteCount)).ToList();
+        var total = await investigations.CountAsync(includeArchived, cancellationToken);
+        var items = await investigations.ListAsync(includeArchived, limit, offset, cancellationToken);
+        return (total, items.Select(i => ToSummary(i.Investigation, i.TargetCount, i.NoteCount)).ToList());
     }
 
     public async Task<InvestigationWorkspaceDto> GetWorkspaceAsync(Guid investigationId, CancellationToken cancellationToken = default)

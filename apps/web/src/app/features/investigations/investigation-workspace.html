@@ -5,19 +5,42 @@
     <div class="stl-empty">Investigation not found.</div>
   } @else if (workspace(); as w) {
     <div class="stl-page-header">
-      <div>
-        <h1><span class="case-number mono">#{{ w.investigation.caseNumber.toString().padStart(4, '0') }}</span> {{ w.investigation.title }}</h1>
-        <div class="stl-subtitle">
-          created {{ formatRelative(w.investigation.createdAt) }}
-          @if (w.investigation.description) {
-            · {{ w.investigation.description }}
-          }
+      @if (editing()) {
+        <div class="title-edit">
+          <label class="stl-field">
+            <span>Title</span>
+            <input class="stl-input" type="text" [value]="titleDraft()" (input)="titleDraft.set($any($event.target).value)" maxlength="160" />
+          </label>
+          <label class="stl-field">
+            <span>Description</span>
+            <textarea class="stl-input" rows="2" [value]="descDraft()" (input)="descDraft.set($any($event.target).value)" maxlength="2048"></textarea>
+          </label>
+          <div class="edit-actions">
+            <button class="stl-button stl-button--primary" type="button" [disabled]="busy()" (click)="saveEdit()">Save</button>
+            <button class="stl-button" type="button" [disabled]="busy()" (click)="editing.set(false)">Cancel</button>
+          </div>
         </div>
-      </div>
+      } @else {
+        <div>
+          <h1>
+            <span class="case-number mono">#{{ w.investigation.caseNumber.toString().padStart(4, '0') }}</span> {{ w.investigation.title }}
+            @if (auth.canWrite()) {
+              <button class="stl-button small edit-title" type="button" (click)="startEdit()" aria-label="Edit title and description">✎</button>
+            }
+          </h1>
+          <div class="stl-subtitle">
+            created {{ formatRelative(w.investigation.createdAt) }}
+            @if (w.investigation.description) {
+              · {{ w.investigation.description }}
+            }
+          </div>
+        </div>
+      }
       <div class="header-actions">
         <span class="stl-tag" [class.stl-tag--success]="w.investigation.status === 'active'" [class.stl-tag--warning]="w.investigation.status !== 'active'">
           {{ w.investigation.status }}
         </span>
+        <a class="stl-button" [routerLink]="['/graph']" [queryParams]="{ investigationId: w.investigation.id }">Open ego graph</a>
         <button class="stl-button" type="button" (click)="setStatus(w.investigation.status === 'active')" [disabled]="busy() || !auth.canWrite()">
           {{ w.investigation.status === 'active' ? 'Archive' : 'Reopen' }}
         </button>

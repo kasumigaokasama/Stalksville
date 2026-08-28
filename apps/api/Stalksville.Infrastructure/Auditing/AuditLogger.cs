@@ -47,4 +47,50 @@ public sealed class AuditLogger(
             logger.LogWarning(ex, "Failed to persist audit entry {Action}", action);
         }
     }
+
+    public async Task<(int Total, IReadOnlyList<AuditEntryView> Entries)> QueryAsync(
+        string? action = null,
+        string? target = null,
+        Guid? userId = null,
+        int limit = 50,
+        int offset = 0,
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+        IQueryable<AuditLog> query = db.AuditLogs.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(action))
+        {
+            query = query.Where(a => a.Action.StartsWith(action));
+        }
+        if (!string.IsNullOrWhiteSpace(target))
+        {
+            query = query.Where(a => a.Target!.StartsWith(target));
+        }
+        if (userId is { } user)
+        {
+            query = query.Where(a => a.UserId == user);
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        var rows = await query
+            .OrderByDescending(a => a.OccurredAt)
+            .Skip(Math.Max(0, offset))
+            .Take(Math.Clamp(limit, 1, 200))
+            .ToListAsync(cancellationToken);
+
+        var userIds = rows.Where(a => a.UserId is not null).Select(a => a.UserId!.Value).Distinct().ToList();
+        var usernames = userIds.Count > 0
+            ? await db.Users.Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username, cancellationToken)
+            : new Dictionary<Guid, string>();
+
+        return (total, rows.Select(a => new AuditEntryView(
+            a.Id,
+            a.UserId,
+            a.UserId is { } id && usernames.TryGetValue(id, out var username) ? username : null,
+            a.Action,
+            a.Target,
+            a.Details,
+            a.OccurredAt)).ToList());
+    }
 }

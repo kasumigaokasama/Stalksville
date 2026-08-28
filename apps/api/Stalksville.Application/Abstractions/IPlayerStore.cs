@@ -25,10 +25,10 @@ public interface IPlayerStore
 
     Task TouchSnapshotAsync(Guid snapshotId, DateTimeOffset observedAt, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<PlayerSnapshot>> GetSnapshotsAsync(Guid playerId, int limit = 50, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PlayerSnapshot>> GetSnapshotsAsync(Guid playerId, int limit = 50, int offset = 0, CancellationToken cancellationToken = default);
 
-    /// <summary>Full snapshot history, oldest first — progression charts read the whole series.</summary>
-    Task<IReadOnlyList<PlayerSnapshot>> GetSnapshotHistoryAsync(Guid playerId, CancellationToken cancellationToken = default);
+    /// <summary>Snapshot history, oldest first, capped to the most recent <paramref name="maxEntries"/> — progression charts.</summary>
+    Task<IReadOnlyList<PlayerSnapshot>> GetSnapshotHistoryAsync(Guid playerId, int maxEntries = 500, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Hard-deletes a player and every dependent row (snapshots, changes, memberships,
@@ -38,7 +38,7 @@ public interface IPlayerStore
 
     Task AddChangesAsync(IReadOnlyList<PlayerChange> changes, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<PlayerChange>> GetChangesAsync(Guid playerId, int limit = 100, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PlayerChange>> GetChangesAsync(Guid playerId, int limit = 100, int offset = 0, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ChangeWithPlayer>> GetRecentChangesAsync(int limit = 10, CancellationToken cancellationToken = default);
 

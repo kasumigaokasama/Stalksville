@@ -1,70 +1,59 @@
-<div class="palette" role="dialog" aria-label="Command palette">
+<div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
   <input
     #input
     class="stl-input palette-input"
     type="text"
+    role="combobox"
+    aria-label="Search the workspace"
+    aria-autocomplete="list"
+    [attr.aria-expanded]="results().length > 0"
+    aria-controls="palette-results"
+    [attr.aria-activedescendant]="activeId()"
     placeholder="Search… cases, notes, clans — or player:shadowfox for a live Wolvesville lookup"
+    autocomplete="off"
     [value]="query()"
     (input)="onQuery($any($event.target).value)"
-    (keydown.enter)="runFirst()"
-    (keydown.escape)="close()"
+    (keydown)="onKey($event)"
   />
 
-  @if (playerResult(); as p) {
-    <button class="result" type="button" (click)="runFirst()">
-      <span class="result-icon">👤</span>
-      <span class="result-body">
-        <span class="result-title">{{ p.dossier.player.username }}</span>
-        <span class="result-sub">
-          Wolvesville ID {{ p.dossier.observed?.wolvesvillePlayerId }}
-          @if (p.changesDetectedInThisObservation > 0) {
-            · {{ p.changesDetectedInThisObservation }} change(s) detected
-          } @else if (p.wasReobserved) {
-            · unchanged since last snapshot
-          }
-        </span>
-      </span>
-      <span class="stl-tag stl-tag--observed">open dossier</span>
-    </button>
-  } @else if (isLoadingPlayer()) {
+  @if (isLoadingPlayer()) {
     <div class="palette-note">Looking up player…</div>
   } @else if (error(); as err) {
     <div class="palette-note palette-note--error">{{ err }}</div>
   }
 
-  @if (searchQuery() !== null) {
+  @if (searchQuery() !== null && !isLoadingPlayer()) {
     @if (isLoadingSearch()) {
       <div class="palette-note">Searching workspace…</div>
-    } @else if (searchHits().length === 0) {
+    } @else if (results().length === 0 && error() === null) {
       <div class="palette-note">No workspace matches — try player:&lt;username&gt; for a live Wolvesville lookup.</div>
-    }
-    @for (hit of searchHits(); track hit.type + hit.id + hit.title) {
-      <button class="result" type="button" (click)="run({ kind: 'search', label: hit.title, target: hitTarget(hit) })">
-        <span class="result-icon">{{ hitIcon(hit) }}</span>
-        <span class="result-body">
-          <span class="result-title">{{ hit.title }}</span>
-          @if (hit.subtitle; as sub) {
-            <span class="result-sub">{{ sub }}</span>
-          }
-        </span>
-        <span class="stl-tag" [class.stl-tag--observed]="hit.type !== 'investigation'" [class.stl-tag--derived]="hit.type === 'investigation'">
-          {{ hit.type }}
-        </span>
-      </button>
-    }
-  } @else {
-    @for (action of filteredNav(); track action.target) {
-      <button class="result" type="button" (click)="run(action)">
-        <span class="result-icon">→</span>
-        <span class="result-body">
-          <span class="result-title">{{ action.label }}</span>
-        </span>
-      </button>
     }
   }
 
+  <ul id="palette-results" role="listbox" aria-label="Results" class="result-list">
+    @for (option of results(); track option.target + option.label; let i = $index) {
+      <li role="option" [id]="'palette-option-' + i" [class.active]="i === activeIndex()" [attr.aria-selected]="i === activeIndex()">
+        <button class="result" type="button" (click)="run(option)" tabindex="-1">
+          <span class="result-icon">{{ option.icon ?? '→' }}</span>
+          <span class="result-body">
+            <span class="result-title">{{ option.label }}</span>
+            @if (option.sub) {
+              <span class="result-sub">{{ option.sub }}</span>
+            }
+          </span>
+          @if (option.tag) {
+            <span class="stl-tag" [class.stl-tag--observed]="option.kind !== 'search'" [class.stl-tag--derived]="option.kind === 'search'">
+              {{ option.tag }}
+            </span>
+          }
+        </button>
+      </li>
+    }
+  </ul>
+
   <div class="palette-footer">
-    <span><kbd>↵</kbd> open first result</span>
+    <span><kbd>↑↓</kbd> navigate</span>
+    <span><kbd>↵</kbd> open</span>
     <span><kbd>esc</kbd> close</span>
   </div>
 </div>

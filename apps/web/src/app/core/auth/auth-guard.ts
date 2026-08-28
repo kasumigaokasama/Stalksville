@@ -9,3 +9,11 @@ export const authGuard: CanActivateFn = () => {
 
   return auth.isAuthenticated() ? true : router.createUrlTree(['/login']);
 };
+
+/** ADMIN-only routes (admin console); everyone else lands on the dashboard. */
+export const adminGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  return auth.canAdmin() ? true : router.createUrlTree(['/dashboard']);
+};

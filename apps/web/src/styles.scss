@@ -257,6 +257,19 @@ code,
   font-size: 13px;
 }
 
+/* Screen-reader-only labels for icon-only controls and filter selects. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .stl-page {
   padding: 24px 28px;
   max-width: 1180px;
@@ -290,4 +303,17 @@ code,
   background: transparent;
   box-shadow: none;
   margin-top: 12vh;
+}
+
+/* CDK dialog panel for regular dialogs (erase confirmation, …). */
+.stl-dialog-panel {
+  background: var(--stl-bg-raised);
+  border: 1px solid var(--stl-border-strong);
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+/* Wide tables scroll horizontally instead of breaking small-screen layouts. */
+.stl-card {
+  overflow-x: auto;
 }

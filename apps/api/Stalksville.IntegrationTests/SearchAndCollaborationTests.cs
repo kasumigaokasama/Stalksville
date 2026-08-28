@@ -132,8 +132,7 @@ public sealed class SearchAndCollaborationTests : IAsyncLifetime
 
     [Fact]
     public async Task Archive_RBAC_ViewerForbidden_AnalystAllowed()
-    {
-        var created = await _client.PostAsJsonAsync("/api/v1/investigations", new { title = "RBAC archive case" });
+    {        var created = await _client.PostAsJsonAsync("/api/v1/investigations", new { title = "RBAC archive case" });
         created.EnsureSuccessStatusCode();
         var id = JsonDocument.Parse(await created.Content.ReadAsStreamAsync())
             .RootElement.GetProperty("investigation").GetProperty("id").GetGuid();
@@ -159,5 +158,54 @@ public sealed class SearchAndCollaborationTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, archived.StatusCode);
         var reopened = await _client.PostAsync($"/api/v1/investigations/{id}/reopen", content: null);
         Assert.Equal(HttpStatusCode.OK, reopened.StatusCode);
+    }
+
+    [Fact]
+    public async Task AuditLog_AdminOnly_FilterableAndPaged()
+    {
+        // The viewer-creation above audits USER_CREATED; the viewer must not read the log.
+        var viewerUsername = $"viewer-{Guid.NewGuid():N}"[..32];
+        var viewerPassword = $"viewer-{Guid.NewGuid():N}";
+        await _client.PostAsJsonAsync("/api/v1/admin/users",
+            new { username = viewerUsername, password = viewerPassword, role = "VIEWER" });
+
+        var login = await _client.PostAsJsonAsync("/api/v1/auth/login", new { username = viewerUsername, password = viewerPassword });
+        login.EnsureSuccessStatusCode();
+        var viewerToken = JsonDocument.Parse(await login.Content.ReadAsStreamAsync()).RootElement.GetProperty("token").GetString();
+        using var viewerClient = _factory.CreateClient();
+        viewerClient.DefaultRequestHeaders.Authorization = new("Bearer", viewerToken);
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewerClient.GetAsync("/api/v1/admin/audit")).StatusCode);
+
+        // Admin sees the USER_CREATED entries with the actor resolved to a username.
+        var page = await _client.GetAsync("/api/v1/admin/audit?action=USER_CREATED&limit=1");
+        page.EnsureSuccessStatusCode();
+        Assert.NotNull(page.Headers.GetValues("X-Total-Count").FirstOrDefault());
+        var body = JsonDocument.Parse(await page.Content.ReadAsStreamAsync()).RootElement;
+        var entries = body.EnumerateArray().ToList();
+        Assert.Single(entries);
+        Assert.Equal("USER_CREATED", entries[0].GetProperty("action").GetString());
+        Assert.Equal("admin", entries[0].GetProperty("username").GetString());
+    }
+
+    [Fact]
+    public async Task Timeline_Pagination_OffsetsPageThroughEvents()
+    {
+        // Generate some events first.
+        await _client.GetAsync("/api/v1/players/lookup?username=flex");
+
+        var first = await _client.GetAsync("/api/v1/timeline?limit=2&offset=0");
+        first.EnsureSuccessStatusCode();
+        Assert.NotNull(first.Headers.GetValues("X-Total-Count").FirstOrDefault());
+        var firstIds = JsonDocument.Parse(await first.Content.ReadAsStreamAsync()).RootElement
+            .EnumerateArray().Select(e => e.GetProperty("id").GetString()).ToList();
+
+        var second = await _client.GetAsync("/api/v1/timeline?limit=2&offset=2");
+        second.EnsureSuccessStatusCode();
+        var secondIds = JsonDocument.Parse(await second.Content.ReadAsStreamAsync()).RootElement
+            .EnumerateArray().Select(e => e.GetProperty("id").GetString()).ToList();
+
+        Assert.Equal(2, firstIds.Count);
+        Assert.True(secondIds.Count <= 2);
+        Assert.Empty(firstIds.Intersect(secondIds)); // pages are disjoint
     }
 }

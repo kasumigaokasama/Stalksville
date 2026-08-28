@@ -1,5 +1,7 @@
-<div class="shell">
-  <aside class="sidebar">
+<div class="shell" [class.drawer-open]="drawerOpen()">
+  <div class="drawer-backdrop" (click)="closeDrawer()" aria-hidden="true"></div>
+
+  <aside class="sidebar" [attr.aria-label]="'Primary navigation'">
     <div class="brand">
       <span class="brand-mark">STV</span>
       <span class="brand-name">Stalksville</span>
@@ -7,7 +9,7 @@
 
     <nav class="nav">
       @for (item of nav; track item.path) {
-        <a [routerLink]="item.path" routerLinkActive="active">
+        <a [routerLink]="item.path" routerLinkActive="active" (click)="closeDrawer()">
           {{ item.label }}
           @if (item.path === '/alerts' && unreadAlerts.unread() > 0; ) {
             <span class="nav-badge">{{ unreadAlerts.unread() > 99 ? '99+' : unreadAlerts.unread() }}</span>
@@ -26,7 +28,8 @@
       </div>
       <button class="stl-button logout" type="button" (click)="logout()">Sign out</button>
       <button class="stl-button theme-toggle" type="button" (click)="theme.toggle()"
-              [title]="theme.current() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+              [title]="theme.current() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+              [attr.aria-label]="theme.current() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
         {{ theme.current() === 'dark' ? '☀' : '☾' }}
       </button>
     </div>
@@ -34,6 +37,10 @@
 
   <div class="main">
     <header class="topbar">
+      <button class="menu-toggle" type="button" (click)="drawerOpen.set(!drawerOpen())"
+              aria-label="Toggle navigation menu" [attr.aria-expanded]="drawerOpen()">
+        <span></span><span></span><span></span>
+      </button>
       <button class="search-trigger" type="button" (click)="openPalette()">
         <span class="search-hint">Search everything…</span>
         <kbd>Ctrl K</kbd>
@@ -43,4 +50,11 @@
       <router-outlet />
     </main>
   </div>
+</div>
+
+<!-- Unread alert count is announced to assistive tech. -->
+<div class="visually-hidden" aria-live="polite">
+  @if (unreadAlerts.unread() > 0) {
+    {{ unreadAlerts.unread() }} unread alerts
+  }
 </div>

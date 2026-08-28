@@ -18,7 +18,7 @@ Stalksville distinguishes three kinds of information everywhere — in the datab
 | Cache | In-memory behind `ICacheProvider` (Redis-ready) |
 | Testing | xUnit, vitest, Playwright |
 
-Current feature set: dashboard, player dossier (snapshots/changes/evidence + **Intelligence tab** with explainable exposure and anomaly insights), clan search & import, **investigations (cases, targets, notes, aggregated timeline, AI case explanation, Markdown/CSV/JSON exports)**, global timeline with filters, **relationship graph** (Cytoscape, confidence edges, connection-path finder), **analytics**, **player compare with overlap analysis**, **role-based access control** (ADMIN / ANALYST / VIEWER, with admin user management), settings/connection report, Ctrl+K command palette, and an **adaptive-refresh background worker** (`apps/worker`).
+Current feature set: dashboard, player dossier (snapshots/changes/evidence + **Intelligence tab** with explainable exposure and anomaly insights), clan search & import, **investigations (cases, targets, notes, tags, assignment, aggregated timeline, AI case explanation, Markdown/CSV/JSON/print exports)**, global timeline with filters and load-more paging, **relationship graph** (Cytoscape, confidence edges, connection-path finder, community analytics), **analytics**, **player compare with overlap analysis**, **XP highscore boards + ranked leaderboard captures** (rank-shift alerts for tracked players), **cosmetics catalogs** (badge/profile-icon names instead of raw ids), **alert inbox** with evidence deep-links, **admin console** (users, client API keys, audit log viewer), **role-based access control** (ADMIN / ANALYST / VIEWER), settings/connection report, Ctrl+K command palette (keyboard-navigable), light/dark themes, responsive layout with a mobile navigation drawer, and an **adaptive-refresh background worker** (`apps/worker`) that also captures leaderboards and refreshes catalogs daily. `GET /health` exposes DB + cache readiness for orchestration.
 
 ### AI narration (optional by design)
 
@@ -37,11 +37,11 @@ The LLM receives only case facts/evidence/confidence, is instructed never to inv
 
 | Role | Capabilities |
 | --- | --- |
-| ADMIN | everything + user management (`/api/v1/admin/users`) |
-| ANALYST | imports, refreshes, case editing |
+| ADMIN | everything + admin console (`/admin`: users, API keys, audit log) |
+| ANALYST | imports, refreshes, case editing, leaderboard captures |
 | VIEWER | read-only (dossiers, graph, timeline, analytics, exports, case explanations) |
 
-The seeded `admin` creates other users via the API. Write operations against Wolvesville are **not implemented**; `Wolvesville:EnableWriteOperations` exists as scaffolding only.
+The seeded `admin` manages other users (and issues client API keys for programmatic access — sent as `X-Api-Key`, stored as SHA-256 hashes, carrying the owning user's role). Write operations against Wolvesville are **not implemented**; `Wolvesville:EnableWriteOperations` exists as scaffolding only.
 
 ### Background worker
 
@@ -49,7 +49,7 @@ The seeded `admin` creates other users via the API. Write operations against Wol
 dotnet run --project apps/api/Stalksville.Worker
 ```
 
-Every 15 minutes (configurable via `Worker:*`) it re-refreshes the least-recently-observed tracked players through the full pipeline — snapshots, change detection and memberships keep accumulating without anyone clicking. In mock mode this makes the demo dataset evolve on its own.
+Every 15 minutes (configurable via `Worker:*`) it re-refreshes the least-recently-observed tracked players through the full pipeline — snapshots, change detection and memberships keep accumulating without anyone clicking. It also captures the XP highscore boards and the ranked leaderboard (`Worker:HighscoreCaptureIntervalHours` / `Worker:RankedCaptureIntervalHours`, default 24h each) and refreshes the cosmetics catalogs daily (`Worker:CatalogRefreshIntervalHours`). In mock mode this makes the demo dataset evolve on its own.
 
 ## Repository layout
 
@@ -124,7 +124,7 @@ dotnet build ../api
 npx playwright test
 ```
 
-E2E notes: Playwright boots the API (mock mode, dedicated `stalksville_e2e` database) and `ng serve` itself. The admin password for the E2E database is generated randomly and kept in a temp file so repeated runs stay consistent; see `apps/web/playwright.config.ts` for the reset procedure.
+E2E notes: Playwright boots the API (mock mode, dedicated `stalksville_e2e` database) and `ng serve` itself. The admin password for the E2E database is generated randomly and kept in a temp file so repeated runs stay consistent; see `apps/web/playwright.config.ts` for the reset procedure. If port 4200 is busy on your machine, run the suite with `STALKSVILLE_E2E_PORT=4300 npx playwright test`.
 
 ## Live-API behavior (verified against api.wolvesville.com)
 

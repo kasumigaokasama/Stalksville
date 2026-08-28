@@ -21,7 +21,7 @@ public sealed class AnalyticsService(
         var changeCount = await players.CountChangesAsync(cancellationToken);
         var relationshipCount = await derivations.CountRelationshipsAsync(cancellationToken);
 
-        var investigationItems = await investigations.ListAsync(includeArchived: false, cancellationToken);
+        var investigationCount = await investigations.CountAsync(includeArchived: false, cancellationToken);
 
         var changesPerDay = await players.GetChangeCountsPerDayAsync(days, cancellationToken);
         var snapshotsPerDay = await players.GetSnapshotCountsPerDayAsync(days, cancellationToken);
@@ -41,7 +41,7 @@ public sealed class AnalyticsService(
             snapshotCount,
             changeCount,
             relationshipCount,
-            investigationItems.Count,
+            investigationCount,
             series);
     }
 

@@ -1,5 +1,5 @@
 import { Dialog } from '@angular/cdk/dialog';
-import { Component, HostListener, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../auth/auth';
@@ -12,6 +12,9 @@ import { CommandPalette, type PaletteAction } from './command-palette';
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   styleUrl: './shell.scss',
   templateUrl: './shell.html',
+  host: {
+    '(window:keydown)': 'onKeydown($event)',
+  },
 })
 export class Shell {
   private readonly dialog = inject(Dialog);
@@ -19,6 +22,9 @@ export class Shell {
   protected readonly auth = inject(AuthService);
   protected readonly unreadAlerts = inject(UnreadAlerts);
   protected readonly theme = inject(Theme);
+
+  /** Mobile drawer state — desktop (>=900px) keeps the static sidebar. */
+  protected readonly drawerOpen = signal(false);
 
   protected readonly nav = [
     { path: '/dashboard', label: 'Overview' },
@@ -32,10 +38,10 @@ export class Shell {
     { path: '/alerts', label: 'Alerts' },
     { path: '/analytics', label: 'Analytics' },
     { path: '/settings', label: 'Settings' },
+    ...(this.auth.canAdmin() ? [{ path: '/admin', label: 'Admin' }] : []),
   ];
 
-  @HostListener('window:keydown', ['$event'])
-  onKeydown(event: KeyboardEvent): void {
+  protected onKeydown(event: KeyboardEvent): void {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
       this.openPalette();
@@ -48,6 +54,10 @@ export class Shell {
       panelClass: 'stl-palette-panel',
       width: '560px',
     });
+  }
+
+  protected closeDrawer(): void {
+    this.drawerOpen.set(false);
   }
 
   protected logout(): void {

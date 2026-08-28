@@ -70,8 +70,20 @@ public sealed class DerivationStore(StalksvilleDbContext db) : IDerivationStore
 
     public async Task<IReadOnlyList<TimelineEvent>> GetFilteredTimelineAsync(TimelineFilter filter, CancellationToken cancellationToken = default)
     {
-        var query = db.TimelineEvents.AsNoTracking().AsQueryable();
+        var query = ApplyTimelineFilter(db.TimelineEvents.AsNoTracking().AsQueryable(), filter);
 
+        return await query
+            .OrderByDescending(t => t.OccurredAt)
+            .Skip(Math.Max(0, filter.Offset))
+            .Take(Math.Clamp(filter.Limit, 1, 500))
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountTimelineAsync(TimelineFilter filter, CancellationToken cancellationToken = default)
+        => ApplyTimelineFilter(db.TimelineEvents.AsNoTracking().AsQueryable(), filter).CountAsync(cancellationToken);
+
+    private static IQueryable<TimelineEvent> ApplyTimelineFilter(IQueryable<TimelineEvent> query, TimelineFilter filter)
+    {
         if (filter.EntityType is { } entityType)
         {
             query = query.Where(t => t.EntityType == entityType);
@@ -92,10 +104,7 @@ public sealed class DerivationStore(StalksvilleDbContext db) : IDerivationStore
             query = query.Where(t => t.IsDerived == isDerived);
         }
 
-        return await query
-            .OrderByDescending(t => t.OccurredAt)
-            .Take(Math.Clamp(filter.Limit, 1, 500))
-            .ToListAsync(cancellationToken);
+        return query;
     }
 
     public async Task AddEvidenceRangeAsync(IReadOnlyList<Evidence> evidence, CancellationToken cancellationToken = default)

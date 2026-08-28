@@ -172,6 +172,30 @@ export class InvestigationWorkspace {
 
   // ---- collaboration: assignment + tags (expansion phase 4) ----
 
+  // ---- inline title/description editing (PATCH-backed) ----
+  protected readonly editing = signal(false);
+  protected readonly titleDraft = signal('');
+  protected readonly descDraft = signal('');
+
+  protected startEdit(): void {
+    const investigation = this.workspace()?.investigation;
+    if (!investigation) {
+      return;
+    }
+    this.titleDraft.set(investigation.title);
+    this.descDraft.set(investigation.description ?? '');
+    this.editing.set(true);
+  }
+
+  protected async saveEdit(): Promise<void> {
+    const title = this.titleDraft().trim();
+    if (title.length < 3) {
+      this.actionError.set('Title must be at least 3 characters.');
+      return;
+    }
+    await this.mutate(() => this.patch({ title, description: this.descDraft().trim() || undefined }), () => this.editing.set(false));
+  }
+
   protected async setAssignee(userId: string): Promise<void> {
     await this.mutate(() => this.patch({ assignedToUserId: userId || null, assigneeProvided: true }));
   }

@@ -12,7 +12,10 @@ public interface IInvestigationStore
     /// <summary>Persists edits to a loaded investigation (title/description/assignee/tags).</summary>
     Task UpdateAsync(Investigation investigation, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<InvestigationListItem>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<InvestigationListItem>> ListAsync(bool includeArchived, int limit = 100, int offset = 0, CancellationToken cancellationToken = default);
+
+    /// <summary>Total investigations matching the visibility filter (for pagination headers).</summary>
+    Task<int> CountAsync(bool includeArchived, CancellationToken cancellationToken = default);
 
     Task<Investigation?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);
 

@@ -6,7 +6,8 @@ This document explains the intent; if tokens change, update both.
 ## Direction
 
 Dark-first analyst UI — closer to Linear / GitHub / modern SOC tooling than to a generic admin
-dashboard (master plan §6). Dark mode is the **only** mode in this phase. Accents stay restrained;
+dashboard (master plan §6). Dark is the default; a light theme is available via the shell toggle
+(`[data-theme="light"]` token overrides, persisted to localStorage). Accents stay restrained;
 saturated color is reserved for meaning, never decoration:
 
 - risk / errors
@@ -54,7 +55,7 @@ observed; if Stalksville computed it, it is derived and must be visually marked 
 ## Shared classes
 
 - `.stl-page`, `.stl-page-header` — page scaffold and title row
-- `.stl-card` — raised panel
+- `.stl-card` — raised panel (scrolls horizontally when tables overflow small screens)
 - `.stl-tag` (+ `--observed --derived --success --warning --danger`) — status chips
 - `.stl-button` (+ `--primary`) — actions
 - `.stl-input` — text inputs
@@ -63,10 +64,24 @@ observed; if Stalksville computed it, it is derived and must be visually marked 
 - `.stl-empty` — empty states
 - `.field-chip` — change-record field labels (violet, derived semantics)
 - `.stl-palette-panel` — CDK dialog chrome for the command palette
+- `.stl-dialog-panel` — CDK dialog chrome for regular dialogs (erase confirmation)
+- `.visually-hidden` — screen-reader-only labels for icon-only controls and filter selects
+- `stl-skeleton` (`shared/ui/skeleton`) — shimmer loading placeholders replacing bare "Loading…" text
+
+## Accessibility patterns
+
+- Dossier tabs: real `role="tablist"`/`role="tab"` with roving tabindex, arrow/Home/End
+  navigation and `aria-selected`; the content pane is a labelled `role="tabpanel"`.
+- Command palette: combobox + listbox semantics (`aria-activedescendant`), arrow-key result
+  navigation, Enter opens, Esc closes.
+- The unread-alert count is announced through an `aria-live="polite"` region in the shell.
+- Destructive actions (player erasure) use a CDK dialog with a mandatory typed reason.
 
 ## Layout
 
-Fixed 220px sidebar (Overview / Players / Clans / Investigations / Timeline / Settings), 52px
-topbar whose only control is the ⌘K/Ctrl+K search trigger, content column max-width 1180px.
+Desktop: fixed 220px sidebar (Overview / Players / Highscores / Ranked / Clans / Investigations /
+Graph / Timeline / Alerts / Analytics / Settings / Admin), 52px topbar whose controls are the
+hamburger (mobile) and the Ctrl+K search trigger, content column max-width 1180px. Below 900px
+the sidebar becomes an overlay drawer behind the hamburger (backdrop, closes on navigate).
 Component styles live next to their components; only tokens and cross-feature primitives belong
 in `styles.scss`.

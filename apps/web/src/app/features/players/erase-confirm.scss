@@ -1,0 +1,27 @@
+.erase-dialog {
+  padding: 20px;
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 16px;
+  }
+
+  p {
+    color: var(--stl-text-muted);
+    font-size: 13px;
+    margin: 0 0 14px;
+  }
+
+  .erase-error {
+    color: var(--stl-danger, #f87171);
+    font-size: 12px;
+    margin-top: 6px;
+  }
+
+  .erase-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+  }
+}

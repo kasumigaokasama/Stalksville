@@ -1,0 +1,160 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Admin console</h1>
+      <div class="stl-subtitle">Users, client API keys and the sensitive-operation audit log.</div>
+    </div>
+  </div>
+
+  <section class="stl-card">
+    <h2>Users</h2>
+    @if (usersLoading()) {
+      <div class="stl-empty">Loading users…</div>
+    } @else {
+      <table class="stl-table">
+        <thead><tr><th>User</th><th>Role</th><th>Created</th><th>Last login</th><th></th></tr></thead>
+        <tbody>
+          @for (u of users(); track u.id) {
+            <tr [class.selected]="u.id === selectedUserId()">
+              <td>{{ u.username }}</td>
+              <td><span class="stl-tag">{{ u.role }}</span></td>
+              <td class="muted">{{ formatRelative(u.createdAt) }}</td>
+              <td class="muted">{{ u.lastLoginAt ? formatRelative(u.lastLoginAt) : 'never' }}</td>
+              <td>
+                <button class="stl-button small" type="button" (click)="selectUser(u)">
+                  {{ u.id === selectedUserId() ? 'Hide keys' : 'API keys' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    @if (selectedUser(); as user) {
+      <div class="keys-panel">
+        <h3>API keys — {{ user.username }}</h3>
+        <p class="muted">
+          Keys are sent as <code>X-Api-Key</code> and carry the user's role. The full key is shown
+          once at issue time; only a SHA-256 hash is stored.
+        </p>
+
+        @if (issuedKey(); as issued) {
+          <div class="issued-key">
+            <span class="stl-tag stl-tag--warning">shown once</span>
+            <code class="mono">{{ issued.apiKey }}</code>
+          </div>
+        }
+        @if (keyError()) {
+          <div class="form-error">{{ keyError() }}</div>
+        }
+
+        <div class="issue-row">
+          <label class="stl-field">
+            <span>Key name</span>
+            <input class="stl-input" type="text" [value]="keyName()" (input)="keyName.set($any($event.target).value)"
+                   placeholder="ci-integration" />
+          </label>
+          <button class="stl-button" type="button" [disabled]="keyBusy() || !keyName().trim()" (click)="issueKey()">
+            {{ keyBusy() ? 'Issuing…' : 'Issue key' }}
+          </button>
+        </div>
+
+        @if (keys().length === 0) {
+          <div class="stl-empty">No keys issued for this user.</div>
+        } @else {
+          <table class="stl-table">
+            <thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              @for (k of keys(); track k.id) {
+                <tr>
+                  <td>{{ k.name }}</td>
+                  <td class="mono">{{ k.prefix }}…</td>
+                  <td class="muted">{{ formatRelative(k.createdAt) }}</td>
+                  <td class="muted">{{ k.lastUsedAt ? formatRelative(k.lastUsedAt) : 'never' }}</td>
+                  <td>
+                    @if (k.revokedAt) {
+                      <span class="stl-tag stl-tag--danger">revoked</span>
+                    } @else {
+                      <span class="stl-tag stl-tag--success">active</span>
+                    }
+                  </td>
+                  <td>
+                    @if (!k.revokedAt) {
+                      <button class="stl-button small danger" type="button" [disabled]="keyBusy()" (click)="revokeKey(k)">Revoke</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="stl-card">
+    <h2>Create user</h2>
+    <form class="stl-form" (ngSubmit)="createUser()">
+      <label class="stl-field">
+        <span>Username</span>
+        <input class="stl-input" type="text" [formField]="createForm.username" />
+      </label>
+      <label class="stl-field">
+        <span>Password</span>
+        <input class="stl-input" type="password" [formField]="createForm.password" />
+      </label>
+      <label class="stl-field">
+        <span>Role</span>
+        <select class="stl-input" [value]="model().role" (change)="model.set({ ...model(), role: $any($event.target).value })">
+          @for (role of roles; track role) {
+            <option [value]="role">{{ role }}</option>
+          }
+        </select>
+      </label>
+      <button class="stl-button" type="submit" [disabled]="creating()">
+        {{ creating() ? 'Creating…' : 'Create user' }}
+      </button>
+    </form>
+    @if (createError()) {
+      <div class="form-error">{{ createError() }}</div>
+    }
+  </section>
+
+  <section class="stl-card">
+    <h2>Audit log</h2>
+    <div class="audit-filters">
+      <label class="stl-field">
+        <span>Action prefix</span>
+        <input class="stl-input" type="search" [value]="auditAction()"
+               (input)="auditAction.set($any($event.target).value)"
+               placeholder="PLAYER_, USER_, API_KEY…" (keydown.enter)="reloadAudit(); $event.preventDefault()" />
+      </label>
+      <button class="stl-button" type="button" (click)="reloadAudit()">Filter</button>
+    </div>
+
+    @if (auditRows().length === 0 && !auditLoading()) {
+      <div class="stl-empty">No audit entries match.</div>
+    } @else {
+      <table class="stl-table">
+        <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
+        <tbody>
+          @for (entry of auditRows(); track entry.id) {
+            <tr>
+              <td class="muted" [title]="formatDateTime(entry.occurredAt)">{{ formatRelative(entry.occurredAt) }}</td>
+              <td>{{ entry.username ?? 'system' }}</td>
+              <td><span class="stl-tag stl-tag--derived mono">{{ entry.action }}</span></td>
+              <td class="mono">{{ entry.target ?? '—' }}</td>
+              <td class="muted mono details">{{ entry.details ?? '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (auditHasMore()) {
+        <button class="stl-button small" type="button" [disabled]="auditLoading()" (click)="loadAudit(false)">
+          {{ auditLoading() ? 'Loading…' : 'Load more' }}
+        </button>
+      }
+    }
+  </section>
+</div>

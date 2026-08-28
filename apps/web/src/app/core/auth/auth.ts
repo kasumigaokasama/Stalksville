@@ -23,6 +23,9 @@ export class AuthService {
   /** ANALYST and ADMIN may mutate; VIEWER is read-only (enforced server-side, mirrored in UI). */
   readonly canWrite = computed(() => this._user()?.role !== 'VIEWER');
 
+  /** ADMIN-only surfaces (user management, API keys, audit log). */
+  readonly canAdmin = computed(() => this._user()?.role === 'ADMIN');
+
   login(username: string, password: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.http

@@ -43,7 +43,7 @@ public sealed class PlayerIntelligenceService(
         var player = await players.FindByIdAsync(playerId, cancellationToken)
             ?? throw new EntityNotFoundException("player", playerId);
 
-        var changes = await players.GetChangesAsync(player.Id, limit: 200, cancellationToken);
+        var changes = await players.GetChangesAsync(player.Id, limit: 200, cancellationToken: cancellationToken);
         var insights = InsightGenerator.Generate(changes);
 
         return insights.Select(i => new InsightDto(

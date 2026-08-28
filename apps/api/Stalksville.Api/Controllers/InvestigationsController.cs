@@ -36,9 +36,15 @@ public sealed class InvestigationsController(
 
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<InvestigationSummaryDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> List([FromQuery] bool includeArchived = false, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> List(
+        [FromQuery] bool includeArchived = false,
+        [FromQuery] int limit = 100,
+        [FromQuery] int offset = 0,
+        CancellationToken cancellationToken = default)
     {
-        return Ok(await investigations.ListAsync(includeArchived, cancellationToken));
+        var (total, items) = await investigations.ListAsync(includeArchived, limit, offset, cancellationToken);
+        Response.Headers["X-Total-Count"] = total.ToString();
+        return Ok(items);
     }
 
     [HttpPost]

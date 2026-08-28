@@ -1,0 +1,26 @@
+<div class="erase-dialog" role="dialog" aria-modal="true" aria-label="Confirm erasure">
+  <h2>Erase tracked data</h2>
+  <p>
+    This permanently deletes <strong>{{ data.username }}</strong> and every derived row in
+    Stalksville — snapshots, changes, relationships, timeline events and alerts.
+    Wolvesville is never contacted. This cannot be undone.
+  </p>
+  <label class="stl-field">
+    <span>Reason for the audit log</span>
+    <textarea
+      class="stl-input"
+      rows="3"
+      maxlength="256"
+      [value]="reason()"
+      (input)="reason.set($any($event.target).value); tooShort.set(false)"
+      placeholder="e.g. data-protection request"
+    ></textarea>
+  </label>
+  @if (tooShort()) {
+    <div class="erase-error">A reason of at least 4 characters is required.</div>
+  }
+  <div class="erase-actions">
+    <button class="stl-button" type="button" (click)="cancel()">Cancel</button>
+    <button class="stl-button danger" type="button" (click)="confirm()">Erase permanently</button>
+  </div>
+</div>

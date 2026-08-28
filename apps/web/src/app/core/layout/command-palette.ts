@@ -9,12 +9,16 @@ export interface PaletteAction {
   kind: 'navigate' | 'player' | 'search';
   label: string;
   target: string;
+  icon?: string;
+  sub?: string;
+  tag?: string;
 }
 
 /**
  * CTRL+K command palette. Free text searches the whole workspace (tracked players and clans by
  * name, active investigations by title/description/notes via PostgreSQL FTS); the prefix
  * `player:<username>` performs a live Wolvesville lookup that imports the player.
+ * Keyboard: ↑/↓ move, Home/End jump, ↵ opens the active result, esc closes.
  */
 @Component({
   selector: 'stl-command-palette',
@@ -27,20 +31,22 @@ export class CommandPalette {
   private readonly router = inject(Router);
 
   protected readonly query = signal('');
+  protected readonly activeIndex = signal(0);
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('input');
 
   private readonly navigateActions: PaletteAction[] = [
-    { kind: 'navigate', label: 'Overview', target: '/dashboard' },
-    { kind: 'navigate', label: 'Players', target: '/players' },
-    { kind: 'navigate', label: 'Highscores', target: '/highscores' },
-    { kind: 'navigate', label: 'Clans', target: '/clans' },
-    { kind: 'navigate', label: 'Investigations', target: '/investigations' },
-    { kind: 'navigate', label: 'Graph', target: '/graph' },
-    { kind: 'navigate', label: 'Timeline', target: '/timeline' },
-    { kind: 'navigate', label: 'Alerts', target: '/alerts' },
-    { kind: 'navigate', label: 'Analytics', target: '/analytics' },
-    { kind: 'navigate', label: 'Compare players', target: '/players/compare' },
-    { kind: 'navigate', label: 'Settings — Wolvesville connection', target: '/settings' },
+    { kind: 'navigate', label: 'Overview', target: '/dashboard', icon: '→' },
+    { kind: 'navigate', label: 'Players', target: '/players', icon: '→' },
+    { kind: 'navigate', label: 'Highscores', target: '/highscores', icon: '→' },
+    { kind: 'navigate', label: 'Ranked', target: '/ranked', icon: '→' },
+    { kind: 'navigate', label: 'Clans', target: '/clans', icon: '→' },
+    { kind: 'navigate', label: 'Investigations', target: '/investigations', icon: '→' },
+    { kind: 'navigate', label: 'Graph', target: '/graph', icon: '→' },
+    { kind: 'navigate', label: 'Timeline', target: '/timeline', icon: '→' },
+    { kind: 'navigate', label: 'Alerts', target: '/alerts', icon: '→' },
+    { kind: 'navigate', label: 'Analytics', target: '/analytics', icon: '→' },
+    { kind: 'navigate', label: 'Compare players', target: '/players/compare', icon: '→' },
+    { kind: 'navigate', label: 'Settings — Wolvesville connection', target: '/settings', icon: '→' },
   ];
 
   // ---- live Wolvesville lookup via player: prefix ----
@@ -105,6 +111,41 @@ export class CommandPalette {
     return this.navigateActions;
   });
 
+  /** One flat, ordered result list so keyboard and pointer share the same model. */
+  protected readonly results = computed<PaletteAction[]>(() => {
+    if (this.playerQuery() !== null) {
+      const player = this.playerResult();
+      return player
+        ? [{
+            kind: 'player',
+            label: player.dossier.player.username,
+            target: player.dossier.player.id,
+            icon: '👤',
+            tag: 'open dossier',
+            sub: player.dossier.observed?.wolvesvillePlayerId,
+          }]
+        : [];
+    }
+
+    const q = this.searchQuery();
+    if (q !== null) {
+      return this.searchHits().map((hit) => ({
+        kind: 'search' as const,
+        label: hit.title,
+        target: this.hitTarget(hit),
+        icon: this.hitIcon(hit),
+        sub: hit.subtitle ?? undefined,
+        tag: hit.type,
+      }));
+    }
+
+    return this.filteredNav();
+  });
+
+  protected readonly activeId = computed(() =>
+    this.results().length > 0 ? `palette-option-${this.activeIndex()}` : null,
+  );
+
   protected hitTarget(hit: SearchHitDto): string {
     return hit.type === 'player' ? `/players/${hit.id}` : hit.type === 'clan' ? `/clans/${hit.id}` : `/investigations/${hit.id}`;
   }
@@ -119,6 +160,43 @@ export class CommandPalette {
 
   protected onQuery(value: string): void {
     this.query.set(value);
+    this.activeIndex.set(0);
+  }
+
+  protected onKey(event: KeyboardEvent): void {
+    const count = this.results().length;
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        if (count > 0) {
+          this.activeIndex.set((this.activeIndex() + 1) % count);
+        }
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        if (count > 0) {
+          this.activeIndex.set((this.activeIndex() - 1 + count) % count);
+        }
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.activeIndex.set(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        if (count > 0) {
+          this.activeIndex.set(count - 1);
+        }
+        break;
+      case 'Enter':
+        event.preventDefault();
+        this.runActive();
+        break;
+      case 'Escape':
+        event.preventDefault();
+        this.close();
+        break;
+    }
   }
 
   protected run(action: PaletteAction): void {
@@ -132,22 +210,10 @@ export class CommandPalette {
     }
   }
 
-  protected runFirst(): void {
-    const player = this.playerResult();
-    if (player) {
-      this.run({ kind: 'player', label: player.dossier.player.username, target: player.dossier.player.id });
-      return;
-    }
-
-    const hit = this.searchHits()[0];
-    if (hit) {
-      this.run({ kind: 'search', label: hit.title, target: this.hitTarget(hit) });
-      return;
-    }
-
-    const nav = this.filteredNav()[0];
-    if (nav) {
-      this.run(nav);
+  private runActive(): void {
+    const action = this.results()[this.activeIndex()];
+    if (action) {
+      this.run(action);
     }
   }
 
