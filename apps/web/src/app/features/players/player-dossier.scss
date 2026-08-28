@@ -274,3 +274,8 @@
     align-items: baseline;
   }
 }
+
+.erase {
+  color: var(--stl-danger);
+  border-color: var(--stl-danger);
+}

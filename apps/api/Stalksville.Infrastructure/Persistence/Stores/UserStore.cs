@@ -10,6 +10,9 @@ public sealed class UserStore(StalksvilleDbContext db) : IUserStore
     public Task<User?> FindByUsernameAsync(string username, CancellationToken cancellationToken = default)
         => db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == username.ToLower(), cancellationToken);
 
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        => db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+
     public async Task<User> AddUserAsync(string username, string passwordHash, UserRole role, CancellationToken cancellationToken = default)
     {
         var user = new User

@@ -21,6 +21,9 @@
         <button class="stl-button stl-button--primary" type="button" (click)="refresh()" [disabled]="refreshing() || !auth.canWrite()">
           {{ refreshing() ? 'Refreshing…' : 'Refresh from Wolvesville' }}
         </button>
+        @if (isAdmin()) {
+          <button class="stl-button erase" type="button" (click)="erase()">Erase…</button>
+        }
       </div>
     </div>
 

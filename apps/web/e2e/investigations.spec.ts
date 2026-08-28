@@ -76,10 +76,11 @@ test.describe('Investigations (mock Wolvesville)', () => {
     await tagInput.press('Enter');
     await expect(page.locator('.tag-chip', { hasText: 'high-priority' })).toBeVisible({ timeout: 15_000 });
 
-    // The palette finds the case by a word from its title.
+    // The palette finds the case by a word from its title (the persistent e2e database may
+    // hold older cases with the same name, so match the first).
     await page.keyboard.press('Control+k');
     await page.getByPlaceholder(/Search…/).fill('zephyr');
-    await expect(page.locator('.stl-palette-panel .result', { hasText: 'Zephyr cliff investigation' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.stl-palette-panel .result', { hasText: 'Zephyr cliff investigation' }).first()).toBeVisible({ timeout: 15_000 });
     await page.keyboard.press('Enter');
     await expect(page.getByRole('heading', { name: /Zephyr cliff investigation/ })).toBeVisible({ timeout: 15_000 });
   });

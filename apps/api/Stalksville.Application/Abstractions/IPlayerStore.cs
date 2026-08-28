@@ -30,6 +30,12 @@ public interface IPlayerStore
     /// <summary>Full snapshot history, oldest first — progression charts read the whole series.</summary>
     Task<IReadOnlyList<PlayerSnapshot>> GetSnapshotHistoryAsync(Guid playerId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Hard-deletes a player and every dependent row (snapshots, changes, memberships,
+    /// relationships in both directions, timeline events, alerts, evidence). Our DB only.
+    /// </summary>
+    Task EraseAllDataAsync(Guid playerId, string username, string reason, string actor, CancellationToken cancellationToken = default);
+
     Task AddChangesAsync(IReadOnlyList<PlayerChange> changes, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<PlayerChange>> GetChangesAsync(Guid playerId, int limit = 100, CancellationToken cancellationToken = default);

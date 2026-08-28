@@ -33,15 +33,20 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=stalksville;Username=stalksville;Password=stalksville
+      ConnectionStrings__Redis: Host=redis;Port=6379  # plain host:port for StackExchange.Redis
       WOLVESVILLE__MODE: ${WOLVESVILLE_MODE:-Real}
       WOLVESVILLE__APIKEY: ${WOLVESVILLE_APIKEY:-}
       AUTH__ADMINPASSWORD: ${STALKSVILLE_ADMIN_PASSWORD:-}
       AUTH__JWTKEY: ${STALKSVILLE_JWT_KEY:-}
+      # Optional: point at any OTLP collector to receive traces + metrics.
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     ports:
       - "5099:8080"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
 
   worker:
     build:
@@ -51,11 +56,25 @@ services:
     environment:
       DOTNET_ENVIRONMENT: Production
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=stalksville;Username=stalksville;Password=stalksville
+      ConnectionStrings__Redis: Host=redis;Port=6379
       WOLVESVILLE__MODE: ${WOLVESVILLE_MODE:-Real}
       WOLVESVILLE__APIKEY: ${WOLVESVILLE_APIKEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:8-alpine
+    profiles: ["app"]
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   web:
     build:

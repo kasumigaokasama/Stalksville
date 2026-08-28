@@ -74,6 +74,7 @@ public sealed class AdaptiveRefreshWorker(
         var players = scope.ServiceProvider.GetRequiredService<IPlayerStore>();
         var playerService = scope.ServiceProvider.GetRequiredService<PlayerService>();
 
+        await RunRetentionAsync(scope.ServiceProvider, configuration, cancellationToken);
         await CaptureHighscoresIfDueAsync(scope.ServiceProvider, cancellationToken);
 
         var maxPerRun = Math.Max(1, configuration.GetValue("Worker:MaxPerRun", 5));
@@ -112,6 +113,27 @@ public sealed class AdaptiveRefreshWorker(
             {
                 logger.LogWarning(ex, "Failed to refresh {Username}; continuing", candidate.Username);
             }
+        }
+    }
+
+    /// <summary>Snapshot retention, off by default (Worker:SnapshotRetentionDays=0).</summary>
+    private static async Task RunRetentionAsync(IServiceProvider scoped, IConfiguration configuration, CancellationToken cancellationToken)
+    {
+        var retentionDays = configuration.GetValue("Worker:SnapshotRetentionDays", 0);
+        if (retentionDays <= 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await scoped.GetRequiredService<Infrastructure.Retention.RetentionService>()
+                .PruneSnapshotsAsync(retentionDays, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            scoped.GetRequiredService<ILogger<AdaptiveRefreshWorker>>()
+                .LogWarning(ex, "Snapshot retention failed; retrying next cycle");
         }
     }
 

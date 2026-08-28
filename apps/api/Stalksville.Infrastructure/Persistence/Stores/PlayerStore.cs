@@ -105,6 +105,38 @@ public sealed class PlayerStore(StalksvilleDbContext db) : IPlayerStore
             .OrderBy(s => s.CapturedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task EraseAllDataAsync(Guid playerId, string username, string reason, string actor, CancellationToken cancellationToken = default)
+    {
+        // Evidence rows reference change ids — collect them before the changes themselves go.
+        var changeIds = await db.PlayerChanges.AsNoTracking()
+            .Where(c => c.PlayerId == playerId)
+            .Select(c => c.Id)
+            .ToListAsync(cancellationToken);
+
+        // Bulk deletes in dependency-safe order; the player row goes last. Local database only.
+        await db.PlayerSnapshots.Where(s => s.PlayerId == playerId).ExecuteDeleteAsync(cancellationToken);
+        await db.PlayerChanges.Where(c => c.PlayerId == playerId).ExecuteDeleteAsync(cancellationToken);
+
+        if (changeIds.Count > 0)
+        {
+            await db.Evidence.Where(e => e.EntityType == "playerChange" && changeIds.Contains(e.EntityId))
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
+        await db.ClanMemberships.Where(m => m.PlayerId == playerId).ExecuteDeleteAsync(cancellationToken);
+        await db.Relationships
+            .Where(r => (r.SourceEntityType == EntityType.Player && r.SourceEntityId == playerId)
+                     || (r.TargetEntityType == EntityType.Player && r.TargetEntityId == playerId))
+            .ExecuteDeleteAsync(cancellationToken);
+        await db.TimelineEvents.Where(t => t.EntityType == EntityType.Player && t.EntityId == playerId)
+            .ExecuteDeleteAsync(cancellationToken);
+        await db.Alerts.Where(a => a.EntityType == EntityType.Player && a.EntityId == playerId)
+            .ExecuteDeleteAsync(cancellationToken);
+        await db.HighscoreEntries.Where(h => h.PlayerId == playerId).ExecuteDeleteAsync(cancellationToken);
+
+        await db.Players.Where(p => p.Id == playerId).ExecuteDeleteAsync(cancellationToken);
+    }
+
     public async Task AddChangesAsync(IReadOnlyList<PlayerChange> changes, CancellationToken cancellationToken = default)
     {
         db.PlayerChanges.AddRange(changes);

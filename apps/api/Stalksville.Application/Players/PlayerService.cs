@@ -267,9 +267,24 @@ public sealed class PlayerService(
         return snapshots.Select(s => new SnapshotDto(s.Id, s.CapturedAt, s.LastObservedAt, s.ObservationCount, s.PayloadHash, s.Source)).ToList();
     }
 
-    /// <summary>Observed progression series (level, wins, games) projected from snapshot history.</summary>
-    public async Task<ProgressionDto> GetProgressionAsync(Guid playerId, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Erases a tracked player and every dependent row (our database only — Wolvesville is never
+    /// contacted). Audit-logged with the operator's reason; erasure is a data-protection action,
+    /// not an intelligence operation.
+    /// </summary>
+    public async Task DeleteAsync(Guid playerId, string reason, string actor, CancellationToken cancellationToken = default)
     {
+        var player = await players.FindByIdAsync(playerId, cancellationToken)
+            ?? throw new EntityNotFoundException("player", playerId);
+
+        await players.EraseAllDataAsync(player.Id, player.Username, reason, actor, cancellationToken);
+        await audit.WriteAsync("PLAYER_ERASED", $"player:{player.WolvesvillePlayerId}",
+            new { player.Username, reason, actor }, cancellationToken);
+        logger.LogInformation("Player {Username} erased by {Actor}: {Reason}", player.Username, actor, reason);
+    }
+
+    /// <summary>Observed progression series (level, wins, games) projected from snapshot history.</summary>
+    public async Task<ProgressionDto> GetProgressionAsync(Guid playerId, CancellationToken cancellationToken = default)    {
         var player = await players.FindByIdAsync(playerId, cancellationToken)
             ?? throw new EntityNotFoundException("player", playerId);
 

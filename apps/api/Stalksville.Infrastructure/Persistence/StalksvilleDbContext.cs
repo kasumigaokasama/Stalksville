@@ -37,6 +37,8 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
 
     public DbSet<HighscoreEntry> HighscoreEntries => Set<HighscoreEntry>();
 
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -224,6 +226,19 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.HasIndex(x => new { x.Period, x.CapturedAt, x.Rank });
             e.HasIndex(x => x.UsernameLower);
             e.HasIndex(x => x.PlayerId);
+        });
+
+        modelBuilder.Entity<ApiKey>(e =>
+        {
+            e.ToTable("api_keys");
+            e.Property(x => x.Name).HasMaxLength(64);
+            e.Property(x => x.Prefix).HasMaxLength(16);
+            e.Property(x => x.KeyHash).HasMaxLength(64);
+            e.HasIndex(x => x.KeyHash).IsUnique();
+            e.HasIndex(x => x.UserId);
+            e.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId);
         });
     }
 }

@@ -90,6 +90,16 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      # Redis keeps the e2e stack on the shared-cache path (RedisCacheProvider contract).
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     defaults:
       run:
         working-directory: apps/web
@@ -122,6 +132,8 @@ jobs:
         run: npx playwright test
         env:
           CI: "true"
+          # Exercises the shared Redis cache path; locally this stays unset (memory cache).
+          CONNECTIONSTRINGS__REDIS: localhost:6379
 
       - name: Upload test results
         if: failure()

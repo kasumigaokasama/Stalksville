@@ -11,6 +11,8 @@ namespace Stalksville.Api.Controllers;
 [Route("api/v1/players")]
 public sealed class PlayersController(PlayerService players, PlayerIntelligenceService intelligence) : ControllerBase
 {
+    private string Actor => User.FindFirst("name")?.Value ?? "unknown";
+
     /// <summary>Local (already tracked) players matching a username fragment.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<PlayerSummaryDto>>(StatusCodes.Status200OK)]
@@ -83,6 +85,25 @@ public sealed class PlayersController(PlayerService players, PlayerIntelligenceS
     {
         var result = await players.RefreshAsync(id, cancellationToken);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Erases the player and all derived data from OUR database (data-protection action;
+    /// Wolvesville is never contacted). Admin-only, audit-logged with the required reason.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = Policies.Admin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Erase(Guid id, [FromQuery] string? reason, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return BadRequest(new ProblemDetails { Title = "A reason is required for erasure (audit trail)." });
+        }
+
+        await players.DeleteAsync(id, reason.Trim(), Actor, cancellationToken);
+        return NoContent();
     }
 
     [HttpGet("{id:guid}/snapshots")]

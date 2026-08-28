@@ -3,6 +3,11 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using Stalksville.Api.Middleware;
 using Stalksville.Application;
@@ -33,7 +38,13 @@ var expireMinutes = builder.Configuration.GetValue("Auth:ExpireMinutes", 720);
 builder.Services.AddSingleton<ITokenService>(new JwtTokenService(jwtKey, expireMinutes));
 
 builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddAuthentication("Smart")
+    // X-Api-Key requests authenticate through the API-key handler, everything else through JWT.
+    .AddPolicyScheme("Smart", "JWT or API key", o =>
+        o.ForwardDefaultSelector = ctx =>
+            ctx.Request.Headers.ContainsKey(ApiKeyAuthHandler.HeaderName)
+                ? ApiKeyAuthHandler.SchemeName
+                : JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         // Keep short claim names (sub/name/role) instead of the legacy WS-* URI mapping,
@@ -51,7 +62,8 @@ builder.Services
             NameClaimType = "name",
             ClockSkew = TimeSpan.FromSeconds(30)
         };
-    });
+    })
+    .AddScheme<Stalksville.Api.Security.ApiKeyOptions, ApiKeyAuthHandler>(ApiKeyAuthHandler.SchemeName, _ => { });
 
 builder.Services.AddAuthorization(options =>
 {
@@ -63,6 +75,23 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(Policies.Analyst, policy => policy.RequireRole("ANALYST", "ADMIN"));
     options.AddPolicy(Policies.Admin, policy => policy.RequireRole("ADMIN"));
 });
+
+// ---- OpenTelemetry: active only when an OTLP endpoint is configured (e.g. a collector) ----
+var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+{
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService("stalksville-api"))
+        .WithTracing(tracing => tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation())
+        .WithMetrics(metrics => metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation())
+        .UseOtlpExporter();
+    builder.Logging.AddOpenTelemetry(logging => logging.IncludeScopes = true);
+}
 
 // ---- Internal rate limiting: 100 requests / minute / user ----
 // Development (and the e2e suite) legitimately bursts far higher than a human analyst,

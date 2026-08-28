@@ -6,6 +6,8 @@ public interface IUserStore
 {
     Task<User?> FindByUsernameAsync(string username, CancellationToken cancellationToken = default);
 
+    Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task<User> AddUserAsync(string username, string passwordHash, UserRole role, CancellationToken cancellationToken = default);
 
     Task<int> CountUsersAsync(CancellationToken cancellationToken = default);

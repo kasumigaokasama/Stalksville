@@ -1,7 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth';
 import {
@@ -27,6 +28,7 @@ type Tab = 'overview' | 'identity' | 'clans' | 'progression' | 'snapshots' | 'ch
 })
 export class PlayerDossier {
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
 
   readonly id = input.required<string>();
@@ -95,6 +97,26 @@ export class PlayerDossier {
 
   /** Changes with evidence expanded for the selected change. */
   protected readonly selectedChange = signal<ChangeDto | null>(null);
+
+  protected readonly isAdmin = computed(() => this.auth.user()?.role === 'ADMIN');
+
+  /** Data-protection erasure: removes the player and every derived row from OUR database. */
+  protected async erase(): Promise<void> {
+    const player = this.dossier()?.player;
+    if (!player) {
+      return;
+    }
+
+    const reason = window.prompt(
+      `Erase "${player.username}" and ALL tracked data (snapshots, changes, relationships, alerts)?\n\nThis cannot be undone and only affects Stalksville's database. Enter a reason for the audit log:`,
+    );
+    if (!reason) {
+      return;
+    }
+
+    await firstValueFrom(this.http.delete(`/api/v1/players/${this.id()}?reason=${encodeURIComponent(reason)}`));
+    this.router.navigateByUrl('/players');
+  }
 
   protected readonly fieldLabel = fieldLabel;
   protected readonly formatDateTime = formatDateTime;

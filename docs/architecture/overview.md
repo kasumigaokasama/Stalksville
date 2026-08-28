@@ -109,6 +109,13 @@ Cases (`investigations`, sequential `case_number` displayed as `#0042`) organize
 - **Print/PDF export**: `export?format=html` returns a standalone print-optimized HTML report (the Markdown report with print CSS and an auto-invoked print dialog → browser "Save as PDF"). Zero PDF dependencies by design.
 - **Light mode**: `[data-theme="light"]` token overrides in the design system (dark stays the default), toggled from the shell and persisted in localStorage. The observed/derived hues keep their sky/violet identity in both themes.
 
+## Operations & scale (expansion phase 5)
+
+- **Shared Redis cache**: `RedisCacheProvider` (StackExchange.Redis, System.Text.Json values, per-key TTLs preserved) activates automatically when `ConnectionStrings:Redis` is configured — the compose app profile ships a `redis:8-alpine` service and wires it into both API and worker. Without the connection string the in-process memory cache stays. A Redis outage degrades to cache misses, never failed requests.
+- **OpenTelemetry**: API and Worker export traces (ASP.NET Core + HttpClient instrumentation) and metrics (runtime incl.) over OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; no collector is bundled — point the env var at any OTLP endpoint (Grafana Cloud, Alloy, jaeger, …).
+- **Client API keys**: admin-managed `X-Api-Key` credentials (`POST/GET/DELETE /api/v1/admin/users/{id}/api-keys`). Keys are random `stv_…` values shown once; only their SHA-256 hash is stored. The auth pipeline picks the scheme per request (policy scheme selector), and API-key principals carry the same `sub`/`name`/`role` claims as JWTs — policies, role checks and rate limiting behave identically. Revocation is soft and takes effect immediately; usage stamps `lastUsedAt`.
+- **Erasure & retention**: `DELETE /api/v1/players/{id}?reason=` (ADMIN, reason mandatory) removes a player and every dependent row — snapshots, changes, evidence, memberships, relationships, timeline events, alerts, highscore links — from **our** database only, audit-logged as `PLAYER_ERASED`; the dossier offers it behind a confirm-with-reason prompt. Snapshot retention (`Worker:SnapshotRetentionDays`, default 0 = off) prunes old snapshots in the worker cycle while always keeping each player's latest.
+
 ## Operations (phase 7)
 
 - **RBAC**: JWT role claims (short names; inbound claim mapping disabled) drive two policies — `analyst` (ANALYST/ADMIN) guards all mutating endpoints (lookup, refresh, import, case editing), `admin` (ADMIN) guards user management (`/api/v1/admin/users`). VIEWER is read-only including exports and explanations. Users are created via the admin API, never deleted.

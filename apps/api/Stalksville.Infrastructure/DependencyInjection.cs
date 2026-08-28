@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Logging;
 using Polly;
+using StackExchange.Redis;
 using Stalksville.Application.Abstractions;
 using Stalksville.Infrastructure.Auditing;
 using Stalksville.Infrastructure.Caching;
@@ -34,7 +35,20 @@ public static class DependencyInjection
         services.AddScoped(sp => sp.GetRequiredService<IDbContextFactory<StalksvilleDbContext>>().CreateDbContext());
 
         services.AddMemoryCache();
-        services.AddSingleton<ICacheProvider, MemoryCacheProvider>();
+
+        // Shared cache: Redis when ConnectionStrings:Redis is configured (multi-instance setups),
+        // otherwise the in-process memory cache. Same TTL semantics either way.
+        var redisConnectionString = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+            services.AddSingleton<ICacheProvider, RedisCacheProvider>();
+        }
+        else
+        {
+            services.AddSingleton<ICacheProvider, MemoryCacheProvider>();
+        }
+
         services.AddSingleton<IAuditLog, AuditLogger>();
         services.AddHttpContextAccessor();
 
@@ -48,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<IAlertStore, AlertStore>();
         services.AddScoped<IHighscoreStore, HighscoreStore>();
         services.AddScoped<ISearchStore, SearchStore>();
+        services.AddScoped<IApiKeyStore, ApiKeyStore>();
         services.AddScoped<Seeding.StalksvilleSeeder>();
 
         RegisterWolvesvilleClient(services, configuration);
