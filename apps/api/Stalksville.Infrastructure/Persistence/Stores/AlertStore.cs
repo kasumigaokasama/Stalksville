@@ -54,27 +54,38 @@ public sealed class AlertStore(StalksvilleDbContext db) : IAlertStore
         return fresh;
     }
 
-    public async Task<IReadOnlyList<Alert>> ListAsync(AlertFilter filter, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<AlertWithRead>> ListAsync(AlertFilter filter, Guid userId, CancellationToken cancellationToken = default)
     {
         var query = ApplyFilter(db.Alerts.AsNoTracking().AsQueryable(), filter);
+        if (filter.UnreadOnly == true)
+        {
+            query = query.Where(a => !db.AlertReads.Any(r => r.AlertId == a.Id && r.UserId == userId));
+        }
 
         return await query
             .OrderByDescending(a => a.CreatedAt)
             .Skip(Math.Max(0, filter.Offset))
             .Take(Math.Clamp(filter.Limit, 1, 500))
+            .Select(a => new AlertWithRead(
+                a,
+                db.AlertReads.Where(r => r.AlertId == a.Id && r.UserId == userId).Select(r => (DateTimeOffset?)r.ReadAt).FirstOrDefault()))
             .ToListAsync(cancellationToken);
     }
 
-    public Task<int> CountAsync(AlertFilter filter, CancellationToken cancellationToken = default)
-        => ApplyFilter(db.Alerts.AsNoTracking().AsQueryable(), filter).CountAsync(cancellationToken);
+    public Task<int> CountAsync(AlertFilter filter, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var query = ApplyFilter(db.Alerts.AsNoTracking().AsQueryable(), filter);
+        if (filter.UnreadOnly == true)
+        {
+            query = query.Where(a => !db.AlertReads.Any(r => r.AlertId == a.Id && r.UserId == userId));
+        }
+
+        return query.CountAsync(cancellationToken);
+    }
 
     private static IQueryable<Alert> ApplyFilter(IQueryable<Alert> query, AlertFilter filter)
     {
-        if (filter.UnreadOnly == true)
-        {
-            query = query.Where(a => a.ReadAt == null);
-        }
-
+        // Unread is user-relative (resolved through AlertReads by the caller), not the legacy column.
         if (!string.IsNullOrWhiteSpace(filter.Kind))
         {
             query = query.Where(a => a.Kind == filter.Kind);
@@ -88,19 +99,37 @@ public sealed class AlertStore(StalksvilleDbContext db) : IAlertStore
         return query;
     }
 
-    public Task<int> CountUnreadAsync(CancellationToken cancellationToken = default)
-        => db.Alerts.AsNoTracking().CountAsync(a => a.ReadAt == null, cancellationToken);
+    public Task<int> CountUnreadAsync(Guid userId, CancellationToken cancellationToken = default)
+        => db.Alerts.AsNoTracking()
+            .CountAsync(a => !db.AlertReads.Any(r => r.AlertId == a.Id && r.UserId == userId), cancellationToken);
 
-    public async Task<bool> MarkReadAsync(Guid alertId, DateTimeOffset readAt, CancellationToken cancellationToken = default)
+    public async Task<bool> MarkReadAsync(Guid alertId, Guid userId, DateTimeOffset readAt, CancellationToken cancellationToken = default)
     {
-        var updated = await db.Alerts
-            .Where(a => a.Id == alertId && a.ReadAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReadAt, readAt), cancellationToken);
-        return updated == 1;
+        var already = await db.AlertReads.AsNoTracking().AnyAsync(r => r.AlertId == alertId && r.UserId == userId, cancellationToken);
+        if (already || !await db.Alerts.AsNoTracking().AnyAsync(a => a.Id == alertId, cancellationToken))
+        {
+            return false;
+        }
+
+        db.AlertReads.Add(new AlertRead { AlertId = alertId, UserId = userId, ReadAt = readAt });
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
-    public Task<int> MarkAllReadAsync(DateTimeOffset readAt, CancellationToken cancellationToken = default)
-        => db.Alerts
-            .Where(a => a.ReadAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReadAt, readAt), cancellationToken);
+    public async Task<int> MarkAllReadAsync(Guid userId, DateTimeOffset readAt, CancellationToken cancellationToken = default)
+    {
+        var unreadIds = await db.Alerts.AsNoTracking()
+            .Where(a => !db.AlertReads.Any(r => r.AlertId == a.Id && r.UserId == userId))
+            .Select(a => a.Id)
+            .ToListAsync(cancellationToken);
+
+        if (unreadIds.Count == 0)
+        {
+            return 0;
+        }
+
+        db.AlertReads.AddRange(unreadIds.Select(id => new AlertRead { AlertId = id, UserId = userId, ReadAt = readAt }));
+        await db.SaveChangesAsync(cancellationToken);
+        return unreadIds.Count;
+    }
 }

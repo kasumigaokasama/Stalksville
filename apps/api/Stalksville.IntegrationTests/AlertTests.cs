@@ -190,4 +190,46 @@ public sealed class AlertTests : IAsyncLifetime
         response.EnsureSuccessStatusCode();
         return JsonDocument.Parse(await response.Content.ReadAsStreamAsync()).RootElement;
     }
+
+    [Fact]
+    public async Task ReadState_IsPerUser()
+    {
+        // Generate at least one alert.
+        var flexId = await ImportFlexAsync();
+        var mutate = await _mockControl.PutAsJsonAsync("/_test/players/flex", new { clanId = "2002" });
+        mutate.EnsureSuccessStatusCode();
+        await RefreshAsync(flexId);
+
+        // Admin reads everything.
+        var readAll = await _client.PostAsync("/api/v1/alerts/read-all", content: null);
+        readAll.EnsureSuccessStatusCode();
+        Assert.Equal(0, (await GetJsonAsync("/api/v1/alerts/unread-count")).GetProperty("unread").GetInt32());
+
+        // A second account still sees those alerts as unread.
+        var viewerUsername = $"viewer-{Guid.NewGuid():N}"[..32];
+        var viewerPassword = $"viewer-{Guid.NewGuid():N}";
+        await _client.PostAsJsonAsync("/api/v1/admin/users",
+            new { username = viewerUsername, password = viewerPassword, role = "VIEWER" });
+        var login = await _client.PostAsJsonAsync("/api/v1/auth/login", new { username = viewerUsername, password = viewerPassword });
+        login.EnsureSuccessStatusCode();
+        var viewerToken = JsonDocument.Parse(await login.Content.ReadAsStreamAsync()).RootElement.GetProperty("token").GetString();
+
+        using var viewerClient = _factory.CreateClient();
+        viewerClient.DefaultRequestHeaders.Authorization = new("Bearer", viewerToken);
+
+        var viewerUnread = JsonDocument.Parse(
+            await (await viewerClient.GetAsync("/api/v1/alerts/unread-count")).Content.ReadAsStreamAsync()).RootElement;
+        Assert.True(viewerUnread.GetProperty("unread").GetInt32() > 0);
+
+        // The viewer reads one alert; the admin's zero-unread state is unaffected.
+        var unreadList = JsonDocument.Parse(
+            await (await viewerClient.GetAsync("/api/v1/alerts?unreadOnly=true")).Content.ReadAsStreamAsync()).RootElement;
+        var firstAlert = unreadList.EnumerateArray().First();
+        Assert.Null(firstAlert.GetProperty("readAt").GetString());
+
+        var markOne = await viewerClient.PostAsync($"/api/v1/alerts/{firstAlert.GetProperty("id").GetString()}/read", content: null);
+        Assert.Equal(HttpStatusCode.NoContent, markOne.StatusCode);
+
+        Assert.Equal(0, (await GetJsonAsync("/api/v1/alerts/unread-count")).GetProperty("unread").GetInt32());
+    }
 }

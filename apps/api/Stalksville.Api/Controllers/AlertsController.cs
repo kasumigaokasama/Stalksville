@@ -13,6 +13,11 @@ public sealed class AlertsController(IAlertStore alerts) : ControllerBase
 {
     private static readonly JsonSerializerOptions EvidenceJson = new(JsonSerializerDefaults.Web);
 
+    /// <summary>Resolves the calling user from the JWT sub claim — read state is per user.</summary>
+    private Guid UserId => Guid.TryParse(User.FindFirst("sub")?.Value, out var id)
+        ? id
+        : throw new UnauthorizedAccessException("No user claim on the token.");
+
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<AlertDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> List(
@@ -30,16 +35,16 @@ public sealed class AlertsController(IAlertStore alerts) : ControllerBase
             Limit: limit,
             Offset: offset);
 
-        var list = await alerts.ListAsync(filter, cancellationToken);
-        Response.Headers["X-Total-Count"] = (await alerts.CountAsync(filter, cancellationToken)).ToString();
-        return Ok(list.Select(ToDto).ToList());
+        var list = await alerts.ListAsync(filter, UserId, cancellationToken);
+        Response.Headers["X-Total-Count"] = (await alerts.CountAsync(filter, UserId, cancellationToken)).ToString();
+        return Ok(list.Select(a => ToDto(a.Alert, a.ReadAt)).ToList());
     }
 
     [HttpGet("unread-count")]
     [ProducesResponseType<UnreadCountDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> UnreadCount(CancellationToken cancellationToken = default)
     {
-        var unread = await alerts.CountUnreadAsync(cancellationToken);
+        var unread = await alerts.CountUnreadAsync(UserId, cancellationToken);
         return Ok(new UnreadCountDto(unread));
     }
 
@@ -48,7 +53,7 @@ public sealed class AlertsController(IAlertStore alerts) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkRead(Guid alertId, CancellationToken cancellationToken = default)
     {
-        var marked = await alerts.MarkReadAsync(alertId, DateTimeOffset.UtcNow, cancellationToken);
+        var marked = await alerts.MarkReadAsync(alertId, UserId, DateTimeOffset.UtcNow, cancellationToken);
         return marked ? NoContent() : NotFound();
     }
 
@@ -56,11 +61,11 @@ public sealed class AlertsController(IAlertStore alerts) : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> MarkAllRead(CancellationToken cancellationToken = default)
     {
-        await alerts.MarkAllReadAsync(DateTimeOffset.UtcNow, cancellationToken);
+        await alerts.MarkAllReadAsync(UserId, DateTimeOffset.UtcNow, cancellationToken);
         return NoContent();
     }
 
-    private static AlertDto ToDto(Alert alert) => new(
+    private static AlertDto ToDto(Alert alert, DateTimeOffset? readAt) => new(
         alert.Id,
         alert.Kind,
         alert.Severity.ToString().ToLowerInvariant(),
@@ -71,7 +76,7 @@ public sealed class AlertsController(IAlertStore alerts) : ControllerBase
         alert.Body,
         ParseEvidence(alert.Evidence),
         alert.CreatedAt,
-        alert.ReadAt);
+        readAt);
 
     private static AlertEvidenceDto? ParseEvidence(string json)
     {
