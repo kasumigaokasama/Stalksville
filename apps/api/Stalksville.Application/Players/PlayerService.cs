@@ -19,6 +19,7 @@ public sealed class PlayerService(
     IClanStore clans,
     IDerivationStore derivations,
     IAlertStore alerts,
+    IExposureStore exposureStore,
     ICatalogStore catalog,
     Microsoft.Extensions.Options.IOptions<Advanced.AlertsOptions> alertOptions,
     IAuditLog audit,
@@ -164,6 +165,45 @@ public sealed class PlayerService(
             }
         }
 
+        // --- Friend network: materialize observed friendIds into FRIEND_OF relationships ---
+        // Only connections to other tracked players become rows; raw ids stay in the snapshot.
+        var trackedFriends = state.FriendWolvesvilleIds.Count > 0
+            ? await players.GetPlayersByWolvesvilleIdsAsync(state.FriendWolvesvilleIds, cancellationToken)
+            : [];
+        foreach (var friend in trackedFriends.Where(f => f.Id != player.Id))
+        {
+            await derivations.SyncFriendRelationshipAsync(player.Id, friend.Id, current: true, now, cancellationToken);
+            await derivations.SyncFriendRelationshipAsync(friend.Id, player.Id, current: true, now, cancellationToken);
+        }
+        await derivations.CloseStaleFriendshipsAsync(player.Id, [.. trackedFriends.Where(f => f.Id != player.Id).Select(f => f.Id)], now, cancellationToken);
+
+        // A new link between two tracked players is exactly the intelligence this workbench exists for.
+        foreach (var change in changeEntities.Where(c => c.Field == "friendIds" && c.Kind == PlayerChangeKind.SetAddition))
+        {
+            var friend = trackedFriends.FirstOrDefault(f => f.WolvesvillePlayerId == change.NewValue);
+            if (friend is null)
+            {
+                continue;
+            }
+
+            await alerts.AddIfNewAsync(
+            [
+                new AlertCandidate(
+                    AlertKinds.FriendLinkAdded,
+                    AlertSeverity.Info,
+                    $"{state.Username} added {friend.Username} as a friend",
+                    $"Both players are tracked; the link was observed in {state.Username}'s profile (friendIds).",
+                    SerializeMeta(new { playerId = player.Id, friendPlayerId = friend.Id, change.Id, change.FromSnapshotId, change.ToSnapshotId }),
+                    $"{AlertKinds.FriendLinkAdded}:{player.Id}:{friend.Id}:{change.ToSnapshotId}")
+            ], EntityType.Player, player.Id, state.Username, now, cancellationToken);
+        }
+
+        // --- Exposure assessment (after friends sync, so the network category includes them) ---
+        if (await AssessExposureAsync(player, state, observedClanId, snapshot, now, cancellationToken) is { } exposureEvent)
+        {
+            timelineEvents.Add(exposureEvent);
+        }
+
         if (created)
         {
             timelineEvents.Add(Timeline(player.Id, TimelineEventTypes.PlayerDiscovered, isDerived: false,
@@ -240,7 +280,7 @@ public sealed class PlayerService(
             ? await clans.GetClansByIdsAsync(relationshipClanIds, cancellationToken)
             : new Dictionary<Guid, Clan>();
         var relationshipDtos = relationships.Select(r => new RelationshipDto(
-            r.Type == RelationshipType.MemberOf ? "MEMBER_OF" : "PREVIOUSLY_MEMBER_OF",
+            RelationshipLabel(r.Type),
             r.TargetEntityType.ToString().ToLowerInvariant(),
             r.TargetEntityId,
             r.TargetEntityType == EntityType.Clan ? relationshipClans.GetValueOrDefault(r.TargetEntityId)?.Name : null,
@@ -249,12 +289,102 @@ public sealed class PlayerService(
             r.LastObservedAt,
             r.IsCurrent)).ToList();
 
+        // Tracked friends (observed friendIds, materialized as FRIEND_OF relationships).
+        var friendIds = relationships.Where(r => r.Type == RelationshipType.FriendOf).Select(r => r.TargetEntityId).Distinct().ToList();
+        var friendPlayers = friendIds.Count > 0
+            ? await players.GetPlayersByIdsAsync(friendIds, cancellationToken)
+            : [];
+        var friendById = friendPlayers.ToDictionary(p => p.Id);
+        var friendDtos = relationships
+            .Where(r => r.Type == RelationshipType.FriendOf && friendById.ContainsKey(r.TargetEntityId))
+            .OrderByDescending(r => r.IsCurrent)
+            .ThenBy(r => friendById[r.TargetEntityId].Username)
+            .Select(r => new FriendDto(r.TargetEntityId, friendById[r.TargetEntityId].Username, r.IsCurrent))
+            .ToList();
+
         var currentClanName = player.CurrentClanId is { } clanId ? clanMap.GetValueOrDefault(clanId)?.Name : null;
 
         return new PlayerDossierDto(
             new PlayerSummaryDto(player.Id, player.WolvesvillePlayerId, player.Username, player.FirstSeenAt, player.LastSeenAt, player.CurrentClanId, currentClanName),
             observed,
-            new DerivedDto(totalChanges, changeDtos, membershipDtos, relationshipDtos));
+            new DerivedDto(totalChanges, changeDtos, membershipDtos, relationshipDtos, friendDtos));
+    }
+
+    internal static string RelationshipLabel(RelationshipType type) => type switch
+    {
+        RelationshipType.MemberOf => "MEMBER_OF",
+        RelationshipType.PreviouslyMemberOf => "PREVIOUSLY_MEMBER_OF",
+        RelationshipType.FriendOf => "FRIEND_OF",
+        _ => type.ToString().ToUpperInvariant()
+    };
+
+    /// <summary>
+    /// Persists one exposure assessment per new snapshot and raises an ExposureShift alert when the
+    /// score moved at least Alerts:ExposureShiftThreshold points since the previous assessment.
+    /// Returns a timeline event when a shift was alerted on, null otherwise.
+    /// </summary>
+    private async Task<TimelineEvent?> AssessExposureAsync(
+        Player player, NormalizedPlayerState state, Guid? observedClanId, PlayerSnapshot snapshot, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var latestExisting = await exposureStore.GetLatestAsync(player.Id, cancellationToken);
+        if (latestExisting?.SnapshotId == snapshot.Id)
+        {
+            return null; // re-observation of the same snapshot: the assessment already exists
+        }
+
+        var memberships = await clans.GetMembershipsForPlayerAsync(player.Id, cancellationToken);
+        var relationships = await derivations.GetRelationshipsAsync(EntityType.Player, player.Id, cancellationToken);
+        int? clanMemberCount = null;
+        if (observedClanId is { } clanId)
+        {
+            clanMemberCount = (await clans.GetClansByIdsAsync([clanId], cancellationToken)).GetValueOrDefault(clanId)?.MemberCount;
+        }
+
+        var result = ExposureAnalyzer.Analyze(state, memberships, relationships, clanMemberCount);
+
+        var assessment = new ExposureAssessment
+        {
+            Id = Guid.NewGuid(),
+            PlayerId = player.Id,
+            SnapshotId = snapshot.Id,
+            Score = result.Overall,
+            CategoryScores = JsonSerializer.Serialize(
+                result.Categories.Select(c => new { c.Name, c.Score, c.Factors }), MetaJson),
+            AssessedAt = now
+        };
+        await exposureStore.AddAsync(assessment, cancellationToken);
+
+        if (latestExisting is null)
+        {
+            return null; // first assessment: no baseline to diff against
+        }
+
+        var delta = result.Overall - latestExisting.Score;
+        if (Math.Abs(delta) < alertOptions.Value.ExposureShiftThreshold)
+        {
+            return null;
+        }
+
+        await alerts.AddIfNewAsync(
+        [
+            new AlertCandidate(
+                AlertKinds.ExposureShift,
+                Math.Abs(delta) >= alertOptions.Value.ExposureShiftThreshold * 2 ? AlertSeverity.Warning : AlertSeverity.Notice,
+                $"{state.Username}'s exposure score moved {(delta > 0 ? "+" : "")}{delta}",
+                $"Public-information exposure {latestExisting.Score} → {result.Overall} ({(delta > 0 ? "increased" : "decreased")} by {Math.Abs(delta)} points across identity/clan/historical/network/profile factors).",
+                SerializeMeta(new
+                {
+                    playerId = player.Id,
+                    before = new { latestExisting.Id, latestExisting.Score, latestExisting.SnapshotId },
+                    after = new { assessment.Id, assessment.Score, assessment.SnapshotId },
+                    categories = result.Categories.Select(c => new { c.Name, c.Score })
+                }),
+                $"{AlertKinds.ExposureShift}:{player.Id}:{snapshot.Id}")
+        ], EntityType.Player, player.Id, state.Username, now, cancellationToken);
+
+        return Timeline(player.Id, TimelineEventTypes.ExposureShifted, isDerived: true,
+            $"Exposure score {latestExisting.Score} → {result.Overall}", now,
+            new { delta, before = latestExisting.Score, after = result.Overall, snapshotId = snapshot.Id });
     }
 
     public async Task<IReadOnlyList<PlayerSummaryDto>> ListLocalAsync(string query, CancellationToken cancellationToken = default)
@@ -446,6 +576,7 @@ public sealed class PlayerService(
                 TimelineEventTypes.CosmeticsChanged => "Cosmetics changed (badges, avatar or profile icon)",
                 TimelineEventTypes.ProfileChanged => "Profile data changed",
                 TimelineEventTypes.RankStateChanged => "Ranked state changed",
+                TimelineEventTypes.FriendshipChanged => "Friend list changed",
                 _ => classification
             };
 
@@ -461,6 +592,7 @@ public sealed class PlayerService(
         TimelineEventTypes.ProfileChanged => field is "personalMessage" or "username" or "status",
         TimelineEventTypes.CosmeticsChanged => field is "badgeIds" or "equippedAvatarId" or "profileIconId" or "roleCardIds",
         TimelineEventTypes.RankStateChanged => field is "rankedSeason" or "rankedWins" or "rankedLosses" or "rankedCurrentRating",
+        TimelineEventTypes.FriendshipChanged => field == "friendIds",
         _ => false
     };
 

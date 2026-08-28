@@ -279,3 +279,24 @@
   color: var(--stl-danger);
   border-color: var(--stl-danger);
 }
+
+.network-summary {
+  margin: 0 0 10px;
+  font-size: 12px;
+}
+
+.friend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+}

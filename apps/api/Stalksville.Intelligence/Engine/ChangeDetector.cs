@@ -37,6 +37,7 @@ public static class ChangeDetector
 
         Set(changes, "badgeIds", previous.BadgeIds, current.BadgeIds);
         Set(changes, "roleCardIds", previous.RoleCardIds, current.RoleCardIds);
+        Set(changes, "friendIds", previous.FriendWolvesvilleIds, current.FriendWolvesvilleIds);
 
         return changes;
     }
@@ -70,6 +71,11 @@ public static class ChangeDetector
         if (fields.Contains("rankedSeason") || fields.Contains("rankedWins") || fields.Contains("rankedLosses") || fields.Contains("rankedCurrentRating"))
         {
             classifications.Add(TimelineEventTypes.RankStateChanged);
+        }
+
+        if (fields.Contains("friendIds"))
+        {
+            classifications.Add(TimelineEventTypes.FriendshipChanged);
         }
 
         return classifications;

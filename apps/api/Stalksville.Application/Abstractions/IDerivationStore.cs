@@ -17,6 +17,12 @@ public interface IDerivationStore
     /// <summary>Keeps the player→clan relationship row in sync with a membership transition.</summary>
     Task SyncMembershipRelationshipAsync(Guid playerId, Guid clanId, bool current, DateTimeOffset at, CancellationToken cancellationToken = default);
 
+    /// <summary>Upserts one direction of a player↔player friendship observed in a profile's friendIds.</summary>
+    Task SyncFriendRelationshipAsync(Guid playerId, Guid friendPlayerId, bool current, DateTimeOffset at, CancellationToken cancellationToken = default);
+
+    /// <summary>Closes this player's friendship rows whose target is not in the current friend list.</summary>
+    Task CloseStaleFriendshipsAsync(Guid playerId, IReadOnlyList<Guid> currentFriendPlayerIds, DateTimeOffset at, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Relationship>> GetRelationshipsAsync(EntityType entityType, Guid entityId, CancellationToken cancellationToken = default);
 
     Task AddTimelineRangeAsync(IReadOnlyList<TimelineEvent> events, CancellationToken cancellationToken = default);

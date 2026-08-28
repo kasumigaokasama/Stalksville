@@ -74,7 +74,9 @@ public sealed class GraphService(
                 r.Id.ToString(),
                 r.SourceEntityId.ToString(),
                 r.TargetEntityId.ToString(),
-                r.Type == RelationshipType.MemberOf ? "MEMBER_OF" : "PREVIOUSLY_MEMBER_OF",
+                r.Type == RelationshipType.MemberOf ? "MEMBER_OF"
+                    : r.Type == RelationshipType.PreviouslyMemberOf ? "PREVIOUSLY_MEMBER_OF"
+                    : "FRIEND_OF",
                 r.Confidence,
                 r.IsCurrent,
                 r.FirstObservedAt,

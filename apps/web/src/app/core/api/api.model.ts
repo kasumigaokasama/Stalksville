@@ -126,11 +126,18 @@ export interface RelationshipDto {
   isCurrent: boolean;
 }
 
+export interface FriendDto {
+  playerId: string;
+  username: string;
+  current: boolean;
+}
+
 export interface DerivedDto {
   totalChanges: number;
   recentChanges: ChangeDto[];
   memberships: MembershipDto[];
   relationships: RelationshipDto[];
+  friends: FriendDto[];
 }
 
 export interface PlayerDossierDto {

@@ -30,9 +30,9 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
 
     public MockWolvesvilleServer()
     {
-        var flex = new PlayerFixture("3001", "flex", "2001", 42, ["badge_alpha"]);
-        var talon = new PlayerFixture("3002", "talon", "2001", 55, []);
-        var luna = new PlayerFixture("3003", "luna", "2002", 61, ["badge_beta"]);
+        var flex = new PlayerFixture("3001", "flex", "2001", 42, ["badge_alpha"], ["3002"]);
+        var talon = new PlayerFixture("3002", "talon", "2001", 55, [], ["3001"]);
+        var luna = new PlayerFixture("3003", "luna", "2002", 61, ["badge_beta"], []);
 
         _playersByUsername = new Dictionary<string, PlayerFixture>(StringComparer.OrdinalIgnoreCase)
         {
@@ -203,6 +203,16 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
                     player.BadgeIds = [.. player.BadgeIds, mutation.AddBadge];
                 }
 
+                if (mutation.AddFriend is not null)
+                {
+                    player.FriendIds = [.. player.FriendIds, mutation.AddFriend];
+                }
+
+                if (mutation.RemoveFriend is not null)
+                {
+                    player.FriendIds = [.. player.FriendIds.Where(id => id != mutation.RemoveFriend)];
+                }
+
                 if (mutation.Wins is not null)
                 {
                     player.Wins = mutation.Wins.Value;
@@ -326,7 +336,7 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
             totalTieCount = 0,
             achievements = new[] { new { roleId = "role_seer", level = 4, points = 85, pointsNextLevel = 100, category = "EASY" } }
         },
-        friendIds = Array.Empty<string>()
+        friendIds = player.FriendIds
     };
 
     /// <summary>ClanMember payload per spec: "playerId", membership "status", "playerStatus" for presence.</summary>
@@ -383,7 +393,7 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
         }
     }
 
-    private sealed record PlayerFixture(string Id, string Username, string? ClanId, int Level, string[] BadgeIds)
+    private sealed record PlayerFixture(string Id, string Username, string? ClanId, int Level, string[] BadgeIds, string[] FriendIds)
     {
         public string? ClanId { get; set; } = ClanId;
 
@@ -391,12 +401,14 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
 
         public string[] BadgeIds { get; set; } = BadgeIds;
 
+        public string[] FriendIds { get; set; } = FriendIds;
+
         public int Wins { get; set; } = 400;
     }
 
     private sealed record ClanFixture(string Id, string Name, List<string> MemberIds);
 
-    private sealed record PlayerMutation(string? ClanId, int? Level, string? AddBadge, int? Wins);
+    private sealed record PlayerMutation(string? ClanId, int? Level, string? AddBadge, int? Wins, string? AddFriend, string? RemoveFriend);
 
     private sealed record FailureScript(int Status, int Count);
 

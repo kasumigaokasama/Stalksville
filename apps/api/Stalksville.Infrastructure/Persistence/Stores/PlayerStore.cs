@@ -170,6 +170,13 @@ public sealed class PlayerStore(StalksvilleDbContext db) : IPlayerStore
     public async Task<IReadOnlyList<Player>> GetPlayersByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default)
         => await db.Players.Where(p => ids.Contains(p.Id)).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Player>> GetPlayersByWolvesvilleIdsAsync(IReadOnlyList<string> wolvesvillePlayerIds, CancellationToken cancellationToken = default)
+        => wolvesvillePlayerIds.Count == 0
+            ? []
+            : await db.Players.AsNoTracking()
+                .Where(p => wolvesvillePlayerIds.Contains(p.WolvesvillePlayerId))
+                .ToListAsync(cancellationToken);
+
     public async Task SetCurrentClanAsync(Guid playerId, Guid? clanId, CancellationToken cancellationToken = default)
     {
         var player = await db.Players.FirstAsync(p => p.Id == playerId, cancellationToken);

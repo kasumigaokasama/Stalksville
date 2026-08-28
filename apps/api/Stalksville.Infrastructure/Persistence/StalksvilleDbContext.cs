@@ -35,6 +35,8 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
 
     public DbSet<Alert> Alerts => Set<Alert>();
 
+    public DbSet<ExposureAssessment> ExposureAssessments => Set<ExposureAssessment>();
+
     public DbSet<HighscoreEntry> HighscoreEntries => Set<HighscoreEntry>();
 
     public DbSet<RankedEntry> RankedEntries => Set<RankedEntry>();
@@ -258,6 +260,14 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.Property(x => x.Description).HasMaxLength(512);
             e.Property(x => x.ImageUrl).HasMaxLength(512);
             e.HasIndex(x => new { x.Kind, x.ExternalId }).IsUnique();
+        });
+
+        modelBuilder.Entity<ExposureAssessment>(e =>
+        {
+            e.ToTable("exposure_assessments");
+            e.Property(x => x.CategoryScores).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.PlayerId, x.AssessedAt });
+            e.HasIndex(x => x.SnapshotId);
         });
 
         modelBuilder.Entity<ApiKey>(e =>

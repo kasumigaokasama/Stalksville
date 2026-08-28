@@ -55,4 +55,10 @@ public sealed record NormalizedPlayerState
     public int? Achievements { get; init; }
 
     public int FriendCount { get; init; }
+
+    /// <summary>
+    /// Wolvesville player ids from the profile's friendIds payload (observed). Only connections to
+    /// other tracked players are materialized into relationships; the raw ids stay in snapshots.
+    /// </summary>
+    public IReadOnlyList<string> FriendWolvesvilleIds { get; init; } = [];
 }

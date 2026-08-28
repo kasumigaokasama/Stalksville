@@ -154,8 +154,12 @@ public sealed class AlertTests : IAsyncLifetime
         mutate.EnsureSuccessStatusCode();
         await RefreshAsync(flexId);
 
-        var forFlex = await GetJsonAsync($"/api/v1/alerts?entityId={flexId}");
+        // The clan move raises both a ClanChanged alert and (default threshold 15) an ExposureShift.
+        var forFlex = await GetJsonAsync($"/api/v1/alerts?entityId={flexId}&kind=ClanChanged");
         Assert.Single(forFlex.EnumerateArray());
+
+        var shifts = await GetJsonAsync($"/api/v1/alerts?entityId={flexId}&kind=ExposureShift");
+        Assert.Contains(shifts.EnumerateArray(), a => a.GetProperty("title").GetString()!.Contains("exposure"));
 
         var forTalon = await GetJsonAsync($"/api/v1/alerts?entityId={talonId}");
         Assert.Empty(forTalon.EnumerateArray());

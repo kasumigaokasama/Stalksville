@@ -14,6 +14,8 @@ public static class TimelineEventTypes
     public const string MembershipEnded = "MembershipEnded";
     public const string HighscoreRankChanged = "HighscoreRankChanged";
     public const string RankedRankChanged = "RankedRankChanged";
+    public const string FriendshipChanged = "FriendshipChanged";
+    public const string ExposureShifted = "ExposureShifted";
 }
 
 /// <summary>

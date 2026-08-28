@@ -49,6 +49,51 @@ public sealed class DerivationStore(StalksvilleDbContext db) : IDerivationStore
             .ThenByDescending(r => r.LastObservedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task SyncFriendRelationshipAsync(Guid playerId, Guid friendPlayerId, bool current, DateTimeOffset at, CancellationToken cancellationToken = default)
+    {
+        var relationship = await db.Relationships.FirstOrDefaultAsync(r =>
+            r.SourceEntityType == EntityType.Player &&
+            r.SourceEntityId == playerId &&
+            r.TargetEntityType == EntityType.Player &&
+            r.TargetEntityId == friendPlayerId, cancellationToken);
+
+        if (relationship is null)
+        {
+            db.Relationships.Add(new Relationship
+            {
+                Id = Guid.NewGuid(),
+                SourceEntityType = EntityType.Player,
+                SourceEntityId = playerId,
+                TargetEntityType = EntityType.Player,
+                TargetEntityId = friendPlayerId,
+                Type = RelationshipType.FriendOf,
+                Confidence = 1.0,
+                FirstObservedAt = at,
+                LastObservedAt = at,
+                IsCurrent = current
+            });
+        }
+        else
+        {
+            relationship.IsCurrent = current;
+            relationship.LastObservedAt = at;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task CloseStaleFriendshipsAsync(Guid playerId, IReadOnlyList<Guid> currentFriendPlayerIds, DateTimeOffset at, CancellationToken cancellationToken = default)
+        => await db.Relationships
+            .Where(r => r.SourceEntityType == EntityType.Player
+                     && r.SourceEntityId == playerId
+                     && r.TargetEntityType == EntityType.Player
+                     && r.Type == RelationshipType.FriendOf
+                     && r.IsCurrent
+                     && !currentFriendPlayerIds.Contains(r.TargetEntityId))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(r => r.IsCurrent, false)
+                .SetProperty(r => r.LastObservedAt, at), cancellationToken);
+
     public async Task AddTimelineRangeAsync(IReadOnlyList<TimelineEvent> events, CancellationToken cancellationToken = default)
     {
         db.TimelineEvents.AddRange(events);

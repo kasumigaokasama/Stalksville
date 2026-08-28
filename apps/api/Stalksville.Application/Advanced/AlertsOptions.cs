@@ -8,4 +8,7 @@ public sealed class AlertsOptions
 
     /// <summary>Rank movement (either direction) at or above this raises a RankShift alert.</summary>
     public int RankShiftThreshold { get; set; } = 10;
+
+    /// <summary>|Δ exposure score| at or above this raises an ExposureShift alert.</summary>
+    public int ExposureShiftThreshold { get; set; } = 15;
 }

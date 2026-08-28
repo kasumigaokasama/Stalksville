@@ -296,6 +296,36 @@
               }
             }
           </section>
+
+          <section class="stl-card">
+            <h2>
+              Friend network
+              <span class="stl-tag stl-tag--observed">observed friendIds</span>
+              <span class="stl-tag stl-tag--derived">tracked players only</span>
+            </h2>
+            @if (d.observed; as o) {
+              <p class="muted network-summary">
+                {{ o.friendCount }} friend(s) in the Wolvesville profile;
+                {{ d.derived.friends.filter(f => f.current).length }} of them tracked here.
+              </p>
+            }
+            @if (d.derived.friends.length === 0) {
+              <div class="stl-empty">No tracked players appear in this friend list (yet).</div>
+            } @else {
+              <ul class="friend-list">
+                @for (friend of d.derived.friends; track friend.playerId) {
+                  <li>
+                    <a [routerLink]="['/players', friend.playerId]">{{ friend.username }}</a>
+                    @if (friend.current) {
+                      <span class="stl-tag stl-tag--success">current</span>
+                    } @else {
+                      <span class="stl-tag stl-tag--warning">removed</span>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </section>
         </div>
       }
     }

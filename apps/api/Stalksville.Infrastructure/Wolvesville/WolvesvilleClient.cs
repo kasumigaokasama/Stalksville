@@ -291,7 +291,8 @@ public sealed class WolvesvilleClient(
             RoleCardIds = dto.RoleCards?.Select(r => r.RoleId1).Where(id => id is not null).ToList() ?? [],
             RankedCurrentRating = dto.RankedSeasonSkill,
             Achievements = dto.GameStats?.Achievements?.Count,
-            FriendCount = dto.FriendIds?.Count ?? 0
+            FriendCount = dto.FriendIds?.Count ?? 0,
+            FriendWolvesvilleIds = dto.FriendIds ?? []
         };
 
         return new PlayerObservation(rawJson ?? JsonSerializer.Serialize(dto, ResponseJson), state, source ?? "wolvesville:GET /players/{playerId}");

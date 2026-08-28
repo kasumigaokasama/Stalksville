@@ -19,6 +19,7 @@ public static class InsightGenerator
     public const string ClassificationIdentityChurn = "Identity churn";
     public const string ClassificationRapidProgression = "Rapid progression";
     public const string ClassificationCosmeticsMomentum = "Cosmetics momentum";
+    public const string ClassificationWinRateTrend = "Win-rate trend";
 
     public static IReadOnlyList<Insight> Generate(IReadOnlyList<PlayerChange> changes)
     {
@@ -36,6 +37,7 @@ public static class InsightGenerator
         insights.AddIfNotNull(levelInsight);
 
         insights.AddIfNotNull(DetectCosmeticsMomentum(changes));
+        insights.AddIfNotNull(DetectWinRateTrend(changes));
 
         return insights;
     }
@@ -128,6 +130,47 @@ public static class InsightGenerator
             0.6,
             badgeAdds.Select(c => c.Id).ToList());
     }
+
+    /// <summary>Minimum games observed in the window before a win-rate trend means anything.</summary>
+    public const int WinRateTrendMinimumGames = 20;
+
+    /// <summary>Win rate at or above this share of games raises a trend insight (0..1).</summary>
+    public const double WinRateTrendThreshold = 0.65;
+
+    private static Insight? DetectWinRateTrend(IReadOnlyList<PlayerChange> changes)
+    {
+        // Wins and gamesPlayed are cumulative counters: the oldest→newest span of the observed
+        // window gives the deltas the trend is computed from.
+        var winChanges = changes.Where(c => c.Field == "wins").OrderBy(c => c.DetectedAt).ToList();
+        var gameChanges = changes.Where(c => c.Field == "gamesPlayed").OrderBy(c => c.DetectedAt).ToList();
+        if (winChanges.Count < 2 || gameChanges.Count < 2)
+        {
+            return null;
+        }
+
+        var winsDelta = Parse(winChanges[^1].NewValue) - Parse(winChanges[0].OldValue);
+        var gamesDelta = Parse(gameChanges[^1].NewValue) - Parse(gameChanges[0].OldValue);
+        if (gamesDelta < WinRateTrendMinimumGames || winsDelta <= 0)
+        {
+            return null;
+        }
+
+        var rate = (double)winsDelta / gamesDelta;
+        if (rate < WinRateTrendThreshold)
+        {
+            return null;
+        }
+
+        var evidenceIds = winChanges.Select(c => c.Id).Concat(gameChanges.Select(c => c.Id)).ToList();
+        return new Insight(
+            ClassificationWinRateTrend,
+            $"Winning {(int)(rate * 100)}% of the last {gamesDelta} games",
+            $"{winsDelta} wins out of {gamesDelta} games played across the observed window. A sustained win rate this far above the crowd average is unusual and worth correlating with co-players.",
+            Math.Min(0.9, 0.5 + rate / 2),
+            evidenceIds);
+    }
+
+    private static int Parse(string? value) => int.TryParse(value, out var parsed) ? parsed : 0;
 }
 
 internal static class InsightListExtensions

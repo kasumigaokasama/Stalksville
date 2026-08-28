@@ -44,6 +44,9 @@ public interface IPlayerStore
 
     Task<IReadOnlyList<Player>> GetPlayersByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default);
 
+    /// <summary>Batch lookup by Wolvesville ids — resolves friend-list ids to tracked players.</summary>
+    Task<IReadOnlyList<Player>> GetPlayersByWolvesvilleIdsAsync(IReadOnlyList<string> wolvesvillePlayerIds, CancellationToken cancellationToken = default);
+
     Task SetCurrentClanAsync(Guid playerId, Guid? clanId, CancellationToken cancellationToken = default);
 
     Task<int> CountPlayersAsync(CancellationToken cancellationToken = default);

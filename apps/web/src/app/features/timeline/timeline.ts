@@ -37,6 +37,8 @@ export class Timeline {
     'MembershipEnded',
     'HighscoreRankChanged',
     'RankedRankChanged',
+    'FriendshipChanged',
+    'ExposureShifted',
   ] as const;
 
   protected readonly rows = signal<TimelineEventDto[]>([]);

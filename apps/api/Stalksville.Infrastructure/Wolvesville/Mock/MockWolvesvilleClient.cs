@@ -178,17 +178,18 @@ public sealed class MockWolvesvilleClient(ILogger<MockWolvesvilleClient> logger)
             }
         }
 
-        (string Id, int Level, int Wins, int Losses, string? ClanId, string[] Badges, string? Message) profile = username switch
+        (string Id, int Level, int Wins, int Losses, string? ClanId, string[] Badges, string? Message, string[] Friends) profile = username switch
         {
             // Scripted drift: clan toggles every fetch, level rises every third fetch, a badge is
-            // earned once on the fourth fetch.
+            // earned once on the fourth fetch. Friend lists are static and cross-reference the
+            // demo roster so friend-network materialization can be exercised.
             "shadowfox" => ("1001", 80 + fetches / 3, 1_240 + fetches * 3, 610 + fetches,
                 fetches % 2 == 1 ? "2001" : "2002",
                 fetches >= 4 ? ["badge_hunter", "badge_veteran"] : ["badge_hunter"],
-                "Tracking the silver moon."),
-            "nightowl" => ("1002", 64, 870, 512, "2001", ["badge_hunter"], "Hoot."),
-            "talon" => ("1004", 77, 1_050, 690, "2001", ["badge_veteran"], "Sharp eyes."),
-            "wolfsbane" => ("1003", 71, 995, 744, "2002", ["badge_veteran"], null),
+                "Tracking the silver moon.", ["1002", "99005"]),
+            "nightowl" => ("1002", 64, 870, 512, "2001", ["badge_hunter"], "Hoot.", ["1001"]),
+            "talon" => ("1004", 77, 1_050, 690, "2001", ["badge_veteran"], "Sharp eyes.", ["1001", "1003"]),
+            "wolfsbane" => ("1003", 71, 995, 744, "2002", ["badge_veteran"], null, ["1004"]),
             _ => throw new WolvesvilleApiException(404, $"Mock: no player '{username}'.")
         };
 
@@ -217,7 +218,8 @@ public sealed class MockWolvesvilleClient(ILogger<MockWolvesvilleClient> logger)
             RankedCurrentRating = 1490 + (profile.Level % 7),
             RankedPlacementRating = 1400,
             Achievements = 18,
-            FriendCount = 2
+            FriendCount = profile.Friends.Length,
+            FriendWolvesvilleIds = profile.Friends
         };
 
         var raw = JsonSerializer.Serialize(new { state.WolvesvillePlayerId, state.Username, state.Level, state.ClanWolvesvilleId }, Json);

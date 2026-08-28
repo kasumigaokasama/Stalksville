@@ -6,6 +6,8 @@ public static class AlertKinds
     public const string UsernameChanged = "UsernameChanged";
     public const string LevelJump = "LevelJump";
     public const string RankShift = "RankShift";
+    public const string FriendLinkAdded = "FriendLinkAdded";
+    public const string ExposureShift = "ExposureShift";
 }
 
 public enum AlertSeverity

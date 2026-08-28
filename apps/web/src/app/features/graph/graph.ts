@@ -126,7 +126,9 @@ export class Graph implements OnDestroy {
             target: edge.target,
             label: `${edge.type} · ${(edge.confidence * 100).toFixed(0)}%`,
           },
-          classes: edge.isCurrent ? 'edge-current' : 'edge-historical',
+          classes: edge.type === 'FRIEND_OF'
+            ? (edge.isCurrent ? 'edge-friend edge-current' : 'edge-friend edge-historical')
+            : edge.isCurrent ? 'edge-current' : 'edge-historical',
         })),
       ],
       style: [
@@ -165,6 +167,11 @@ export class Graph implements OnDestroy {
           'line-color': '#7a5fa0',
           'width': 1.5,
           'line-style': 'dashed',
+          'curve-style': 'haystack',
+        } },
+        { selector: 'edge.edge-friend', style: {
+          'line-color': '#2dd4bf',
+          'width': 1.5,
           'curve-style': 'haystack',
         } },
         { selector: 'edge:selected', style: { 'line-color': '#e6e9f0', 'width': 3 } },

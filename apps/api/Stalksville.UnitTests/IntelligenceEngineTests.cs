@@ -120,6 +120,53 @@ public sealed class InsightGeneratorTests
     }
 
     [Fact]
+    public void HighWinRateOverEnoughGames_ProducesTrendInsight()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var changes = new[]
+        {
+            Change("wins", now.AddDays(-10), "100", "110"),
+            Change("gamesPlayed", now.AddDays(-10), "200", "215"),
+            Change("wins", now, "110", "135"),
+            Change("gamesPlayed", now, "215", "250")
+        };
+
+        var insights = InsightGenerator.Generate(changes);
+
+        var trend = Assert.Single(insights, i => i.Classification == InsightGenerator.ClassificationWinRateTrend);
+        // 35 wins out of 50 games = 70% → confidence 0.5 + 0.70/2.
+        Assert.Equal(0.85, trend.Confidence, precision: 2);
+        Assert.Equal(4, trend.EvidenceChangeIds.Count);
+        Assert.Contains("70% of the last 50 games", trend.Title);
+    }
+
+    [Fact]
+    public void LowWinRateOrThinWindow_DoNotTriggerTrend()
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        // Below the 65% rate.
+        var lowRate = new[]
+        {
+            Change("wins", now.AddDays(-10), "100", "110"),
+            Change("gamesPlayed", now.AddDays(-10), "200", "220"),
+            Change("wins", now, "110", "118"),
+            Change("gamesPlayed", now, "220", "240")
+        };
+        Assert.DoesNotContain(InsightGenerator.Generate(lowRate), i => i.Classification == InsightGenerator.ClassificationWinRateTrend);
+
+        // High rate but only 8 games in the window.
+        var thinWindow = new[]
+        {
+            Change("wins", now.AddDays(-1), "100", "106"),
+            Change("gamesPlayed", now.AddDays(-1), "200", "208"),
+            Change("wins", now, "106", "108"),
+            Change("gamesPlayed", now, "208", "208")
+        };
+        Assert.DoesNotContain(InsightGenerator.Generate(thinWindow), i => i.Classification == InsightGenerator.ClassificationWinRateTrend);
+    }
+
+    [Fact]
     public void TwoClanChangesWithin14Days_ProduceVolatilityInsight()
     {
         var now = DateTimeOffset.UtcNow;

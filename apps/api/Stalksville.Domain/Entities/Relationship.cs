@@ -3,7 +3,8 @@ namespace Stalksville.Domain.Entities;
 public enum RelationshipType
 {
     MemberOf = 0,
-    PreviouslyMemberOf = 1
+    PreviouslyMemberOf = 1,
+    FriendOf = 2
 }
 
 public enum EntityType

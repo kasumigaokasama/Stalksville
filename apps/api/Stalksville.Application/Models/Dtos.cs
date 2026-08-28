@@ -91,8 +91,13 @@ public sealed record TimelineEventDto(
 
 /// <summary>Evidence block of an alert: the change ids and snapshots that justify it.</summary>
 public sealed record AlertEvidenceDto(
-    Guid PlayerId,
-    IReadOnlyList<AlertEvidenceChangeDto> Changes);
+    Guid? PlayerId,
+    IReadOnlyList<AlertEvidenceChangeDto> Changes)
+{
+    /// <summary>Rule-specific evidence fields (before/after, board, friend ids…) pass through raw.</summary>
+    [global::System.Text.Json.Serialization.JsonExtensionData]
+    public Dictionary<string, global::System.Text.Json.JsonElement>? Extras { get; set; }
+}
 
 public sealed record AlertEvidenceChangeDto(
     Guid Id,
@@ -218,7 +223,14 @@ public sealed record DerivedDto(
     int TotalChanges,
     IReadOnlyList<ChangeDto> RecentChanges,
     IReadOnlyList<MembershipDto> Memberships,
-    IReadOnlyList<RelationshipDto> Relationships);
+    IReadOnlyList<RelationshipDto> Relationships,
+    IReadOnlyList<FriendDto> Friends);
+
+/// <summary>A tracked player that appears in this player's observed friend list.</summary>
+public sealed record FriendDto(
+    Guid PlayerId,
+    string Username,
+    bool Current);
 
 // ---- Dossiers ----
 

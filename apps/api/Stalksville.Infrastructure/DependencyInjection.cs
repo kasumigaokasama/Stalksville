@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IDerivationStore, DerivationStore>();
         services.AddScoped<IInvestigationStore, InvestigationStore>();
         services.AddScoped<IAlertStore, AlertStore>();
+        services.AddScoped<IExposureStore, ExposureStore>();
         services.AddScoped<IHighscoreStore, HighscoreStore>();
         services.AddScoped<IRankedStore, RankedStore>();
         services.AddScoped<ICatalogStore, CatalogStore>();

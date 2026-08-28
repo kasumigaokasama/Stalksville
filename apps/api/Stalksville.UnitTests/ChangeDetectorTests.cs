@@ -107,4 +107,25 @@ public sealed class ChangeDetectorTests
         Assert.Contains(TimelineEventTypes.CosmeticsChanged, classifications);
         Assert.DoesNotContain(TimelineEventTypes.ClanChanged, classifications);
     }
+
+    [Fact]
+    public void FriendAdditionsAndRemovals_AreDetectedAsSetChanges()
+    {
+        var previous = TestData.Player() with { FriendWolvesvilleIds = ["2001", "2002"] };
+        var current = TestData.Player() with { FriendWolvesvilleIds = ["2002", "2003"] };
+
+        var changes = ChangeDetector.Detect(previous, current).ToList();
+
+        var added = Assert.Single(changes, c => c.Field == "friendIds" && c.Kind == PlayerChangeKind.SetAddition);
+        Assert.Null(added.OldValue);
+        Assert.Equal("2003", added.NewValue);
+
+        var removed = Assert.Single(changes, c => c.Field == "friendIds" && c.Kind == PlayerChangeKind.SetRemoval);
+        Assert.Equal("2001", removed.OldValue);
+        Assert.Null(removed.NewValue);
+
+        var classifications = ChangeDetector.Classify(changes);
+        Assert.Contains(TimelineEventTypes.FriendshipChanged, classifications);
+        Assert.DoesNotContain(TimelineEventTypes.CosmeticsChanged, classifications);
+    }
 }
