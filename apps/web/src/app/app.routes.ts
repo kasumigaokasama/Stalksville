@@ -30,6 +30,11 @@ export const routes: Routes = [
         title: 'Stalksville — Highscores',
       },
       {
+        path: 'ranked',
+        loadComponent: () => import('./features/ranked/ranked').then((m) => m.Ranked),
+        title: 'Stalksville — Ranked',
+      },
+      {
         // Static segment must precede players/:id, otherwise 'compare' is treated as an id.
         path: 'players/compare',
         loadComponent: () => import('./features/players/player-compare').then((m) => m.PlayerCompare),

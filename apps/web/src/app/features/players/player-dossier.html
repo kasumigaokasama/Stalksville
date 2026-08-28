@@ -109,10 +109,10 @@
               <dt>Wolvesville ID</dt><dd class="mono">{{ o.wolvesvillePlayerId }}</dd>
               <dt>Stalksville ID</dt><dd class="mono">{{ d.player.id }}</dd>
               <dt>Last online</dt><dd>{{ formatDateTime(o.lastOnline) }}</dd>
-              <dt>Profile icon</dt><dd>{{ o.profileIconName ?? o.profileIconId ?? '—' }}</dd>
+              <dt>Profile icon</dt><dd>{{ o.profileIconName ?? catalog.iconLabel(o.profileIconId) ?? o.profileIconId ?? '—' }}</dd>
               <dt>Equipped avatar</dt><dd class="mono">{{ o.equippedAvatarId ?? '—' }}</dd>
               <dt>Role cards</dt><dd>{{ o.roleCardIds.join(', ') || '—' }}</dd>
-              <dt>Badges</dt><dd>{{ o.badgeIds.join(', ') || '—' }}</dd>
+              <dt>Badges</dt><dd>{{ catalog.badgeList(o.badgeIds) || '—' }}</dd>
               <dt>Roses sent / received</dt><dd>{{ o.sentRosesCount ?? '—' }} / {{ o.receivedRosesCount ?? '—' }}</dd>
             </dl>
           }
@@ -202,7 +202,7 @@
                         <span class="stl-tag stl-tag--derived">{{ c.kind === 'SetAddition' ? 'added' : 'removed' }}</span>
                       }
                     </td>
-                    <td class="mono">{{ c.oldValue ?? '∅' }} → {{ c.newValue ?? '∅' }}</td>
+                    <td class="mono">{{ changeValue(c.field, c.oldValue) ?? '∅' }} → {{ changeValue(c.field, c.newValue) ?? '∅' }}</td>
                     <td class="muted">{{ formatRelative(c.detectedAt) }}</td>
                     <td>
                       <button class="stl-button evidence-btn" type="button" (click)="selectedChange.set(selectedChange()?.id === c.id ? null : c)">

@@ -37,6 +37,16 @@ public sealed class ExceptionMappingMiddleware(RequestDelegate next, ILogger<Exc
             logger.LogWarning("Wolvesville upstream error {Status} mapped to {Mapped}: {Message}", ex.StatusCode, status, ex.Message);
             await WriteProblem(context, status, $"{title}: {ex.Message}", "upstream");
         }
+        catch (Polly.CircuitBreaker.BrokenCircuitException ex)
+        {
+            // Repeated upstream failures opened the resilience circuit — not a Stalksville fault.
+            logger.LogWarning(ex, "Wolvesville circuit breaker open");
+            await WriteProblem(
+                context,
+                StatusCodes.Status503ServiceUnavailable,
+                "Wolvesville is temporarily unreachable (repeated upstream failures); retry in a minute.",
+                "upstream");
+        }
         catch (InvalidOperationException ex)
         {
             // Conflicting state (e.g. modifying an archived investigation).

@@ -19,6 +19,7 @@ public sealed class PlayerService(
     IClanStore clans,
     IDerivationStore derivations,
     IAlertStore alerts,
+    ICatalogStore catalog,
     Microsoft.Extensions.Options.IOptions<Advanced.AlertsOptions> alertOptions,
     IAuditLog audit,
     ILogger<PlayerService> logger)
@@ -202,7 +203,11 @@ public sealed class PlayerService(
         ObservedStateDto? observed = null;
         if (latest is not null && SnapshotEngine.Parse(latest.Payload) is { } state)
         {
-            observed = ToObservedDto(state, latest);
+            // Resolve the profile icon id against the refreshed catalog so the dossier shows a
+            // name; falls back to the raw id when the catalog has not been loaded yet.
+            var iconName = (await catalog.FindAsync(
+                CatalogKinds.ProfileIcon, state.ProfileIconId, cancellationToken))?.Name;
+            observed = ToObservedDto(state, latest, iconName);
         }
 
         var changes = await players.GetChangesAsync(player.Id, limit: 50, cancellationToken);
@@ -347,7 +352,7 @@ public sealed class PlayerService(
             .ToList();
     }
 
-    private static ObservedStateDto ToObservedDto(NormalizedPlayerState state, PlayerSnapshot snapshot) => new(
+    private static ObservedStateDto ToObservedDto(NormalizedPlayerState state, PlayerSnapshot snapshot, string? profileIconName = null) => new(
         state.WolvesvillePlayerId,
         state.Username,
         state.PersonalMessage,
@@ -361,7 +366,7 @@ public sealed class PlayerService(
         state.ReceivedRosesCount,
         state.SentRosesCount,
         state.ProfileIconId,
-        state.ProfileIconName,
+        profileIconName ?? state.ProfileIconName,
         state.EquippedAvatarId,
         state.BadgeIds,
         state.RoleCardIds,

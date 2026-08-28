@@ -46,3 +46,31 @@ public sealed record ObservedHighscores(
         _ => throw new ArgumentOutOfRangeException(nameof(period), period, "unknown highscore period"),
     };
 }
+
+/// <summary>One row of the ranked leaderboard (spec RankedLeaderboardPlayer); rank is array order.</summary>
+public sealed record ObservedRankedEntry(
+    string WolvesvillePlayerId,
+    string Username,
+    int Skill);
+
+/// <summary>Spec Leaderboard: the ranksTop board (ranksPlayer around the caller is not captured).</summary>
+public sealed record ObservedRankedLeaderboard(
+    IReadOnlyList<ObservedRankedEntry> Top,
+    string Source);
+
+/// <summary>Season subset of spec RankedSeasonInfo — enough to label captures and show context.</summary>
+public sealed record ObservedRankedSeason(
+    int Number,
+    DateTimeOffset StartTime,
+    DateTimeOffset EndTime,
+    bool Finished,
+    int StartSkillDefault,
+    string Source);
+
+/// <summary>Spec ProfileIcon / Badge flattened into one catalog item shape.</summary>
+public sealed record ObservedCatalogItem(
+    string ExternalId,
+    string Name,
+    string Rarity,
+    string? Description,
+    string? ImageUrl);

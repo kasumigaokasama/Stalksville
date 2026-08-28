@@ -30,6 +30,7 @@ export class Timeline {
     'MembershipStarted',
     'MembershipEnded',
     'HighscoreRankChanged',
+    'RankedRankChanged',
   ] as const;
 
   private readonly events = httpResource<TimelineEventDto[]>(() => {

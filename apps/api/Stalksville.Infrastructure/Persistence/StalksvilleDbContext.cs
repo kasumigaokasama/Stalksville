@@ -37,6 +37,10 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
 
     public DbSet<HighscoreEntry> HighscoreEntries => Set<HighscoreEntry>();
 
+    public DbSet<RankedEntry> RankedEntries => Set<RankedEntry>();
+
+    public DbSet<CatalogItem> CatalogItems => Set<CatalogItem>();
+
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -232,8 +236,33 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.HasIndex(x => x.PlayerId);
         });
 
+        modelBuilder.Entity<RankedEntry>(e =>
+        {
+            e.ToTable("ranked_entries");
+            e.Property(x => x.WolvesvillePlayerId).HasMaxLength(64);
+            e.Property(x => x.Username).HasMaxLength(64);
+            e.Property(x => x.UsernameLower).HasMaxLength(64);
+            // Append-only board: one row per (season, capture, rank).
+            e.HasIndex(x => new { x.SeasonNumber, x.CapturedAt, x.Rank }).IsUnique();
+            e.HasIndex(x => x.UsernameLower);
+            e.HasIndex(x => x.PlayerId);
+        });
+
+        modelBuilder.Entity<CatalogItem>(e =>
+        {
+            e.ToTable("catalog_items");
+            e.Property(x => x.Kind).HasMaxLength(16);
+            e.Property(x => x.ExternalId).HasMaxLength(16);
+            e.Property(x => x.Name).HasMaxLength(128);
+            e.Property(x => x.Rarity).HasMaxLength(16);
+            e.Property(x => x.Description).HasMaxLength(512);
+            e.Property(x => x.ImageUrl).HasMaxLength(512);
+            e.HasIndex(x => new { x.Kind, x.ExternalId }).IsUnique();
+        });
+
         modelBuilder.Entity<ApiKey>(e =>
         {
+
             e.ToTable("api_keys");
             e.Property(x => x.Name).HasMaxLength(64);
             e.Property(x => x.Prefix).HasMaxLength(16);

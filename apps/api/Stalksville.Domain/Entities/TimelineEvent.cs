@@ -13,6 +13,7 @@ public static class TimelineEventTypes
     public const string MembershipStarted = "MembershipStarted";
     public const string MembershipEnded = "MembershipEnded";
     public const string HighscoreRankChanged = "HighscoreRankChanged";
+    public const string RankedRankChanged = "RankedRankChanged";
 }
 
 /// <summary>

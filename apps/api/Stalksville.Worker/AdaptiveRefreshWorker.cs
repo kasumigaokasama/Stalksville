@@ -76,6 +76,8 @@ public sealed class AdaptiveRefreshWorker(
 
         await RunRetentionAsync(scope.ServiceProvider, configuration, cancellationToken);
         await CaptureHighscoresIfDueAsync(scope.ServiceProvider, cancellationToken);
+        await CaptureRankedIfDueAsync(scope.ServiceProvider, cancellationToken);
+        await RefreshCatalogsIfDueAsync(scope.ServiceProvider, cancellationToken);
 
         var maxPerRun = Math.Max(1, configuration.GetValue("Worker:MaxPerRun", 5));
         var minInterval = Math.Max(5, configuration.GetValue("Worker:MinPlayerIntervalMinutes", 60));
@@ -158,6 +160,55 @@ public sealed class AdaptiveRefreshWorker(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Highscore capture failed; retrying next cycle");
+        }
+    }
+
+    /// <summary>The ranked board is captured at most once per interval (default 24h), separately from XP boards.</summary>
+    private async Task CaptureRankedIfDueAsync(IServiceProvider scoped, CancellationToken cancellationToken)
+    {
+        var ranked = scoped.GetRequiredService<Application.Advanced.RankedService>();
+        var store = scoped.GetRequiredService<IRankedStore>();
+        var intervalHours = Math.Max(1, services.GetRequiredService<IConfiguration>().GetValue("Worker:RankedCaptureIntervalHours", 24));
+
+        var lastCapture = await store.GetLastCaptureAtAsync(cancellationToken);
+        if (lastCapture is { } last && DateTimeOffset.UtcNow - last < TimeSpan.FromHours(intervalHours))
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await ranked.CaptureAsync(cancellationToken: cancellationToken);
+            logger.LogInformation("Ranked capture: {Entries} entries (season {Season}), {Alerts} rank-shift alert(s)",
+                result.EntriesStored, result.SeasonNumber, result.RankShiftAlerts);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Ranked capture failed; retrying next cycle");
+        }
+    }
+
+    /// <summary>Cosmetics catalogs refresh daily (default) so id → name resolution stays current.</summary>
+    private async Task RefreshCatalogsIfDueAsync(IServiceProvider scoped, CancellationToken cancellationToken)
+    {
+        var catalog = scoped.GetRequiredService<Application.Advanced.CatalogService>();
+        var store = scoped.GetRequiredService<ICatalogStore>();
+        var intervalHours = Math.Max(1, services.GetRequiredService<IConfiguration>().GetValue("Worker:CatalogRefreshIntervalHours", 24));
+
+        var lastRefresh = await store.GetLastRefreshedAtAsync(cancellationToken);
+        if (lastRefresh is { } last && DateTimeOffset.UtcNow - last < TimeSpan.FromHours(intervalHours))
+        {
+            return;
+        }
+
+        try
+        {
+            var (icons, badges) = await catalog.RefreshAsync(cancellationToken);
+            logger.LogInformation("Catalog refresh: {Icons} profile icons, {Badges} badges", icons, badges);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Catalog refresh failed; retrying next cycle");
         }
     }
 }

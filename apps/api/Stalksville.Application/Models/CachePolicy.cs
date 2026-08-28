@@ -14,6 +14,15 @@ public static class CachePolicy
     /// <summary>Boards reset daily at most; a short TTL keeps manual captures fresh.</summary>
     public static readonly TimeSpan HighscoresTtl = TimeSpan.FromMinutes(15);
 
+    /// <summary>Ranked skill moves continuously; align with the highscore board TTL.</summary>
+    public static readonly TimeSpan RankedLeaderboardTtl = TimeSpan.FromMinutes(15);
+
+    /// <summary>Seasons last weeks; the season label hardly ever changes.</summary>
+    public static readonly TimeSpan RankedSeasonTtl = TimeSpan.FromHours(24);
+
+    /// <summary>Catalogs gain items slowly; names for existing ids are stable upstream.</summary>
+    public static readonly TimeSpan CatalogTtl = TimeSpan.FromHours(24);
+
     public const string PlayerByKeyPrefix = "wv:player:";
     public const string ClanInfoKeyPrefix = "wv:clan:";
     public const string ClanSearchKeyPrefix = "wv:clansearch:";

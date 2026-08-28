@@ -277,6 +277,46 @@ export interface HighscoreCaptureResultDto {
   rankShiftAlerts: number;
 }
 
+export interface RankedRowDto {
+  rank: number;
+  username: string;
+  wolvesvillePlayerId: string;
+  skill: number;
+  playerId: string | null;
+  tracked: boolean;
+}
+
+export interface RankedBoardDto {
+  seasonNumber: number | null;
+  capturedAt: string | null;
+  rows: RankedRowDto[];
+}
+
+export interface RankedSeasonDto {
+  number: number;
+  startTime: string;
+  endTime: string;
+  finished: boolean;
+  startSkillDefault: number;
+  source: string;
+}
+
+export interface RankedCaptureResultDto {
+  capturedAt: string;
+  seasonNumber: number;
+  entriesStored: number;
+  rankShiftAlerts: number;
+}
+
+export interface CatalogItemDto {
+  kind: string;
+  externalId: string;
+  name: string;
+  rarity: string;
+  description: string | null;
+  imageUrl: string | null;
+}
+
 export interface InvestigationSummaryDto {
   id: string;
   caseNumber: number;

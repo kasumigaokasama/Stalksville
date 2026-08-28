@@ -1,0 +1,40 @@
+import { expect, test } from '@playwright/test';
+
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
+
+async function login(page: import('@playwright/test').Page): Promise<void> {
+  await page.goto('/login');
+  await page.getByLabel('Username').fill('admin');
+  await page.getByLabel('Password').fill(ADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible({ timeout: 20_000 });
+}
+
+test.describe('Ranked (mock Wolvesville)', () => {
+  test('season card renders, capture fills the board, tracked rows deep-link', async ({ page }) => {
+    await login(page);
+
+    await page.getByRole('link', { name: 'Ranked' }).click();
+    await expect(page.getByRole('heading', { name: 'Ranked leaderboard' })).toBeVisible();
+
+    // Season context from GET /ranked/season.
+    await expect(page.getByRole('heading', { name: 'Season 21' })).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('button', { name: 'Capture now' }).click();
+    await expect(page.getByText(/Captured 3 entries/)).toBeVisible({ timeout: 20_000 });
+
+    // The mock board ranks talon first.
+    const firstRow = page.locator('.stl-table tbody tr').first();
+    await expect(firstRow.locator('td').nth(1)).toContainText('talon');
+
+    // Track imports an untracked mock player and re-resolves the tracked flag. The e2e database
+    // is persistent, so a player tracked by an earlier run must already satisfy the assertion.
+    const talonRow = page.locator('.stl-table tbody tr', { hasText: 'talon' });
+    const trackButton = talonRow.getByRole('button', { name: 'Track' });
+    if (await trackButton.count() > 0) {
+      await trackButton.click();
+      await expect(page.getByText(/Imported talon/)).toBeVisible({ timeout: 20_000 });
+    }
+    await expect(talonRow.getByText('tracked')).toBeVisible({ timeout: 15_000 });
+  });
+});

@@ -6,6 +6,10 @@ RUN dotnet publish Stalksville.Api/Stalksville.Api.csproj -c Release -o /app/pub
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
+# curl backs the compose healthcheck against GET /health.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Stalksville.Api.dll"]

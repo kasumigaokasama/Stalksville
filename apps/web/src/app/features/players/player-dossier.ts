@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth';
+import { Catalog } from '../../core/catalog/catalog';
 import {
   ChangeDto,
   ExposureResultDto,
@@ -30,6 +31,7 @@ export class PlayerDossier {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthService);
+  protected readonly catalog = inject(Catalog);
 
   readonly id = input.required<string>();
 
@@ -122,4 +124,18 @@ export class PlayerDossier {
   protected readonly formatDateTime = formatDateTime;
   protected readonly formatRelative = formatRelative;
   protected readonly formatNumber = formatNumber;
+
+  /** Cosmetics ids render as catalog names (with the id as fallback) in the change feed. */
+  protected changeValue(field: string, value: string | null): string | null {
+    if (value === null) {
+      return null;
+    }
+    if (field === 'badgeIds') {
+      return this.catalog.badgeLabel(value);
+    }
+    if (field === 'profileIconId') {
+      return this.catalog.iconLabel(value) ?? value;
+    }
+    return value;
+  }
 }

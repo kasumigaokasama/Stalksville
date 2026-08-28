@@ -167,6 +167,45 @@ public sealed record HighscoreCaptureResultDto(
     int EntriesStored,
     int RankShiftAlerts);
 
+// ---- Ranked (observed board + season context + derived rank shifts) ----
+
+public sealed record RankedRowDto(
+    int Rank,
+    string Username,
+    string WolvesvillePlayerId,
+    int Skill,
+    Guid? PlayerId,
+    bool Tracked);
+
+public sealed record RankedBoardDto(
+    int? SeasonNumber,
+    DateTimeOffset? CapturedAt,
+    IReadOnlyList<RankedRowDto> Rows);
+
+public sealed record RankedSeasonDto(
+    int Number,
+    DateTimeOffset StartTime,
+    DateTimeOffset EndTime,
+    bool Finished,
+    int StartSkillDefault,
+    string Source);
+
+public sealed record RankedCaptureResultDto(
+    DateTimeOffset CapturedAt,
+    int SeasonNumber,
+    int EntriesStored,
+    int RankShiftAlerts);
+
+// ---- Cosmetics catalog (observed reference data: ids → display names) ----
+
+public sealed record CatalogItemDto(
+    string Kind,
+    string ExternalId,
+    string Name,
+    string Rarity,
+    string? Description,
+    string? ImageUrl);
+
 // ---- Workspace search ----
 
 public sealed record SearchHitDto(

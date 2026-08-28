@@ -24,6 +24,7 @@ export class Shell {
     { path: '/dashboard', label: 'Overview' },
     { path: '/players', label: 'Players' },
     { path: '/highscores', label: 'Highscores' },
+    { path: '/ranked', label: 'Ranked' },
     { path: '/clans', label: 'Clans' },
     { path: '/investigations', label: 'Investigations' },
     { path: '/graph', label: 'Graph' },

@@ -166,3 +166,96 @@ internal sealed class HighscoresDto
     [JsonPropertyName("daily")]
     public List<HighscoreRankDto> Daily { get; set; } = [];
 }
+
+/// <summary>Spec schema RankedLeaderboardPlayer — one row of the ranked board (rank is array order).</summary>
+internal sealed class RankedLeaderboardPlayerDto
+{
+    [JsonPropertyName("playerId")]
+    public string PlayerId { get; set; } = string.Empty;
+
+    [JsonPropertyName("username")]
+    public string Username { get; set; } = string.Empty;
+
+    [JsonPropertyName("skill")]
+    public int Skill { get; set; }
+}
+
+/// <summary>Spec schema Leaderboard — GET /ranked/leaderboard. Only ranksTop is captured.</summary>
+internal sealed class LeaderboardDto
+{
+    [JsonPropertyName("ranksTop")]
+    public List<RankedLeaderboardPlayerDto> RanksTop { get; set; } = [];
+
+    [JsonPropertyName("ranksPlayer")]
+    public List<RankedLeaderboardPlayerDto> RanksPlayer { get; set; } = [];
+}
+
+/// <summary>Spec schema Season (subset) — nested in RankedSeasonInfo.</summary>
+internal sealed class SeasonDto
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("number")]
+    public int Number { get; set; }
+
+    [JsonPropertyName("startTime")]
+    public DateTimeOffset StartTime { get; set; }
+
+    [JsonPropertyName("endTime")]
+    public DateTimeOffset EndTime { get; set; }
+
+    [JsonPropertyName("finished")]
+    public bool Finished { get; set; }
+}
+
+/// <summary>Spec schema RankedSeasonInfo (subset) — GET /ranked/season.</summary>
+internal sealed class RankedSeasonInfoDto
+{
+    [JsonPropertyName("season")]
+    public SeasonDto Season { get; set; } = new();
+
+    [JsonPropertyName("startSkillDefault")]
+    public int? StartSkillDefault { get; set; }
+}
+
+/// <summary>Spec schema ProfileIcon — GET /items/profileIcons.</summary>
+internal sealed class ProfileIconDto
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("rarity")]
+    public string Rarity { get; set; } = string.Empty;
+
+    [JsonPropertyName("imageUrl")]
+    public string? ImageUrl { get; set; }
+
+    [JsonPropertyName("costInGold")]
+    public int? CostInGold { get; set; }
+
+    [JsonPropertyName("costInRoses")]
+    public int? CostInRoses { get; set; }
+}
+
+/// <summary>Spec schema Badge — GET /items/badges.</summary>
+internal sealed class BadgeDto
+{
+    [JsonPropertyName("badgeId")]
+    public string BadgeId { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("rarity")]
+    public string Rarity { get; set; } = string.Empty;
+
+    [JsonPropertyName("imageUrl")]
+    public string? ImageUrl { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+}

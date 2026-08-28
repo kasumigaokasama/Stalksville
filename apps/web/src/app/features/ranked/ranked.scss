@@ -1,0 +1,28 @@
+.season-card {
+  margin-bottom: 1rem;
+
+  .season-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+  }
+
+  .stl-kv {
+    margin-top: 0.75rem;
+    grid-template-columns: 120px 1fr;
+  }
+}
+
+.table-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--stl-text-dim, #8b93a7);
+  font-size: 0.8rem;
+}

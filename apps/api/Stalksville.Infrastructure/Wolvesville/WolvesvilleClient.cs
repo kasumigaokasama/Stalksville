@@ -129,6 +129,88 @@ public sealed class WolvesvilleClient(
 
     private static ObservedHighscoreRank ToRank(HighscoreRankDto rank) => new(rank.PlayerId, rank.Username, rank.Xp);
 
+    public async Task<ObservedRankedLeaderboard> GetRankedLeaderboardAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        const string cacheKey = "wolvesville:ranked-leaderboard";
+
+        if (!bypassCache && await cache.GetAsync<ObservedRankedLeaderboard>(cacheKey, cancellationToken) is { } cached)
+        {
+            logger.LogDebug("Wolvesville cache hit for ranked/leaderboard");
+            return cached;
+        }
+
+        var dto = await GetAsync<LeaderboardDto>("ranked/leaderboard", cancellationToken);
+        var result = new ObservedRankedLeaderboard(
+            [.. dto.RanksTop.Select(ToRankedEntry)],
+            "wolvesville:GET /ranked/leaderboard");
+
+        await cache.SetAsync(cacheKey, result, CachePolicy.RankedLeaderboardTtl, cancellationToken);
+        return result;
+    }
+
+    private static ObservedRankedEntry ToRankedEntry(RankedLeaderboardPlayerDto player) =>
+        new(player.PlayerId, player.Username, player.Skill);
+
+    public async Task<ObservedRankedSeason> GetRankedSeasonAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        const string cacheKey = "wolvesville:ranked-season";
+
+        if (!bypassCache && await cache.GetAsync<ObservedRankedSeason>(cacheKey, cancellationToken) is { } cached)
+        {
+            logger.LogDebug("Wolvesville cache hit for ranked/season");
+            return cached;
+        }
+
+        var dto = await GetAsync<RankedSeasonInfoDto>("ranked/season", cancellationToken);
+        var result = new ObservedRankedSeason(
+            dto.Season.Number,
+            dto.Season.StartTime,
+            dto.Season.EndTime,
+            dto.Season.Finished,
+            dto.StartSkillDefault ?? 0,
+            "wolvesville:GET /ranked/season");
+
+        await cache.SetAsync(cacheKey, result, CachePolicy.RankedSeasonTtl, cancellationToken);
+        return result;
+    }
+
+    public async Task<IReadOnlyList<ObservedCatalogItem>> GetProfileIconsAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        const string cacheKey = "wolvesville:catalog:profile-icons";
+
+        if (!bypassCache && await cache.GetAsync<IReadOnlyList<ObservedCatalogItem>>(cacheKey, cancellationToken) is { } cached)
+        {
+            logger.LogDebug("Wolvesville cache hit for items/profileIcons");
+            return cached;
+        }
+
+        var dto = await GetAsync<List<ProfileIconDto>>("items/profileIcons", cancellationToken);
+        var result = dto.Select(ToCatalogItem).ToList();
+
+        await cache.SetAsync(cacheKey, result, CachePolicy.CatalogTtl, cancellationToken);
+        return result;
+    }
+
+    public async Task<IReadOnlyList<ObservedCatalogItem>> GetBadgesAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        const string cacheKey = "wolvesville:catalog:badges";
+
+        if (!bypassCache && await cache.GetAsync<IReadOnlyList<ObservedCatalogItem>>(cacheKey, cancellationToken) is { } cached)
+        {
+            logger.LogDebug("Wolvesville cache hit for items/badges");
+            return cached;
+        }
+
+        var dto = await GetAsync<List<BadgeDto>>("items/badges?locale=en", cancellationToken);
+        var result = dto.Select(b => new ObservedCatalogItem(b.BadgeId, b.Name, b.Rarity, b.Description, b.ImageUrl)).ToList();
+
+        await cache.SetAsync(cacheKey, result, CachePolicy.CatalogTtl, cancellationToken);
+        return result;
+    }
+
+    private static ObservedCatalogItem ToCatalogItem(ProfileIconDto icon) =>
+        new(icon.Id, icon.Name, icon.Rarity, null, icon.ImageUrl);
+
     public async Task PingAsync(CancellationToken cancellationToken = default)
     {
         // GET /roles is small and authenticated — used purely as a connectivity/key check.

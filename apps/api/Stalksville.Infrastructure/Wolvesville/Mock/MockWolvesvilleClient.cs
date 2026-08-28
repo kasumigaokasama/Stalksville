@@ -90,6 +90,48 @@ public sealed class MockWolvesvilleClient(ILogger<MockWolvesvilleClient> logger)
         return Task.FromResult(result);
     }
 
+    public Task<ObservedRankedLeaderboard> GetRankedLeaderboardAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        // Demo board includes tracked players so ranked matching and discovery can be exercised.
+        ObservedRankedLeaderboard result = new(
+        [
+            new ObservedRankedEntry("1004", "talon", 2_210),
+            new ObservedRankedEntry("1001", "shadowfox", 2_050),
+            new ObservedRankedEntry("99005", "StormHowl", 1_930),
+        ],
+            "mock:GET /ranked/leaderboard");
+
+        return Task.FromResult(result);
+    }
+
+    public Task<ObservedRankedSeason> GetRankedSeasonAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return Task.FromResult(new ObservedRankedSeason(
+            21, now.AddDays(-40), now.AddDays(20), Finished: false, StartSkillDefault: 1400,
+            "mock:GET /ranked/season"));
+    }
+
+    public Task<IReadOnlyList<ObservedCatalogItem>> GetProfileIconsAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<ObservedCatalogItem> icons =
+        [
+            new("icon_default", "Default Wolf", "COMMON", null, null),
+        ];
+        return Task.FromResult(icons);
+    }
+
+    public Task<IReadOnlyList<ObservedCatalogItem>> GetBadgesAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        // Names for the badge ids the demo players carry, so enrichment can be exercised.
+        IReadOnlyList<ObservedCatalogItem> badges =
+        [
+            new("badge_hunter", "Bounty Hunter", "RARE", "Win 50 games as the Hunter.", null),
+            new("badge_veteran", "Veteran", "EPIC", "Play 1,000 games.", null),
+        ];
+        return Task.FromResult(badges);
+    }
+
     // --- dataset ---
 
     private sealed record MockClan(string Id, string Name, string? Description, int Level, long Xps, string[] MemberUsernames)

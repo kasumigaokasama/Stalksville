@@ -33,6 +33,18 @@ public interface IWolvesvilleClient
     /// <summary>Top-100 XP boards: GET /players/highscores (allTime/monthly/weekly/daily).</summary>
     Task<ObservedHighscores> GetHighscoresAsync(bool bypassCache = false, CancellationToken cancellationToken = default);
 
+    /// <summary>Ranked leaderboard: GET /ranked/leaderboard (ranksTop; rank is array order).</summary>
+    Task<ObservedRankedLeaderboard> GetRankedLeaderboardAsync(bool bypassCache = false, CancellationToken cancellationToken = default);
+
+    /// <summary>Current ranked season: GET /ranked/season (season number + window).</summary>
+    Task<ObservedRankedSeason> GetRankedSeasonAsync(bool bypassCache = false, CancellationToken cancellationToken = default);
+
+    /// <summary>Profile icon catalog: GET /items/profileIcons (short ids → names).</summary>
+    Task<IReadOnlyList<ObservedCatalogItem>> GetProfileIconsAsync(bool bypassCache = false, CancellationToken cancellationToken = default);
+
+    /// <summary>Badge catalog: GET /items/badges?locale=en (short ids → names).</summary>
+    Task<IReadOnlyList<ObservedCatalogItem>> GetBadgesAsync(bool bypassCache = false, CancellationToken cancellationToken = default);
+
     /// <summary>Cheap authenticated call (GET /roles) used for connectivity checks. Throws on failure.</summary>
     Task PingAsync(CancellationToken cancellationToken = default);
 }

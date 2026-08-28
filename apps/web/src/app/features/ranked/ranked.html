@@ -1,0 +1,85 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Ranked leaderboard</h1>
+      <div class="stl-subtitle">Season skill board (observed) — rank-shift alerts fire for tracked players between captures.</div>
+    </div>
+    @if (auth.canWrite()) {
+      <button class="stl-button" type="button" [disabled]="busy()" (click)="capture()">
+        {{ busy() ? 'Capturing…' : 'Capture now' }}
+      </button>
+    }
+  </div>
+
+  @if (season(); as s) {
+    <section class="stl-card season-card">
+      <div class="season-title">
+        <h2>Season {{ s.number }}</h2>
+        <span class="stl-tag" [class.stl-tag--success]="!s.finished" [class.stl-tag--warning]="s.finished">
+          {{ s.finished ? 'finished' : 'running' }}
+        </span>
+        <span class="stl-tag stl-tag--observed">observed</span>
+      </div>
+      <dl class="stl-kv">
+        <dt>Window</dt>
+        <dd>{{ formatDateTime(s.startTime) }} → {{ formatDateTime(s.endTime) }}</dd>
+        <dt>Start skill</dt>
+        <dd>{{ formatNumber(s.startSkillDefault) }}</dd>
+        <dt>Source</dt>
+        <dd class="mono">{{ s.source }}</dd>
+      </dl>
+    </section>
+  }
+
+  @if (note()) {
+    <div class="stl-card note">{{ note() }}</div>
+  }
+
+  <section class="stl-card">
+    @if (isLoading()) {
+      <div class="stl-empty">Loading ranked board…</div>
+    } @else if (rows().length === 0) {
+      <div class="stl-empty">
+        No ranked capture yet — the worker captures daily, or use “Capture now” to pull the board immediately.
+      </div>
+    } @else {
+      <div class="table-meta">
+        <span>Captured {{ formatDateTime(board()?.capturedAt) }}</span>
+        <span class="mono">{{ rows().length }} rows</span>
+      </div>
+      <table class="stl-table">
+        <thead>
+          <tr><th>Rank</th><th>Player</th><th>Skill</th><th>Tracked</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.wolvesvillePlayerId) {
+            <tr>
+              <td class="mono">{{ row.rank }}</td>
+              <td>
+                @if (row.tracked && row.playerId) {
+                  <a [routerLink]="['/players', row.playerId]">{{ row.username }}</a>
+                } @else {
+                  {{ row.username }}
+                }
+              </td>
+              <td class="mono">{{ formatNumber(row.skill) }}</td>
+              <td>
+                @if (row.tracked) {
+                  <span class="stl-tag stl-tag--derived">tracked</span>
+                }
+              </td>
+              <td>
+                @if (auth.canWrite() && !row.tracked) {
+                  <button class="stl-button small" type="button"
+                          [disabled]="tracking() !== null" (click)="track(row.username)">
+                    {{ tracking() === row.username ? 'Importing…' : 'Track' }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</div>

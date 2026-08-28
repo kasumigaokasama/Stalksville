@@ -24,6 +24,7 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
     private readonly Dictionary<string, PlayerFixture> _playersById;
     private readonly Dictionary<string, ClanFixture> _clans;
     private readonly List<HighscoreFixture> _allTimeHighscores;
+    private readonly List<RankedFixture> _rankedTop;
 
     public string BaseUrl { get; }
 
@@ -54,6 +55,16 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
             new("9002", "QuietStorm", 320_000),
             new(talon.Id, talon.Username, 300_000),
             new("9003", "EchoLeaf", 210_000)
+        ];
+
+        // Spec shape: GET /ranked/leaderboard → { ranksTop, ranksPlayer } of RankedLeaderboardPlayer.
+        _rankedTop =
+        [
+            new("9101", "FrostFang", 2_450),
+            new(luna.Id, luna.Username, 2_300),
+            new("9102", "CinderPaw", 2_100),
+            new(flex.Id, flex.Username, 1_980),
+            new("9103", "GaleHowl", 1_720)
         ];
 
         var builder = WebApplication.CreateBuilder();
@@ -96,6 +107,49 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
                 {
                     new { playerId = "9007", username = "DayHowl", xp = 900L }
                 }
+            })));
+
+        _app.MapGet("/ranked/leaderboard", (HttpRequest request) =>
+            Handle(request, () => Results.Json(new
+            {
+                ranksTop = SnapshotRanked(),
+                ranksPlayer = Array.Empty<object>()
+            })));
+
+        _app.MapGet("/ranked/season", (HttpRequest request) =>
+            Handle(request, () => Results.Json(new
+            {
+                season = new
+                {
+                    id = "5a1f0c2e-0000-0000-0000-000000000001",
+                    number = 21,
+                    startTime = "2026-08-01T00:00:00Z",
+                    endTime = "2026-09-15T00:00:00Z",
+                    finished = false
+                },
+                startSkillDefault = 1400,
+                startSkillLevel1 = 1500,
+                startSkillLevel1RequiredSkill = 1600,
+                seasonAwards = Array.Empty<object>(),
+                goldPricePerGame = 50,
+                goldPrizeWinAsVillage = 10,
+                goldPrizeWinAsWerewolf = 20,
+                goldPrizeWinAsVoting = 5,
+                goldPrizeWinAsSolo = 30
+            })));
+
+        _app.MapGet("/items/profileIcons", (HttpRequest request) =>
+            Handle(request, () => Results.Json(new object[]
+            {
+                new { id = "ic1", name = "Moon Wolf", rarity = "RARE", imageUrl = "https://cdn.example.com/ic1.png", costInGold = 800 },
+                new { id = "icon_default", name = "Default", rarity = "COMMON", imageUrl = "https://cdn.example.com/default.png", costInGold = 0 }
+            })));
+
+        _app.MapGet("/items/badges", (HttpRequest request, string? locale) =>
+            Handle(request, () => Results.Json(new object[]
+            {
+                new { badgeId = "badge_alpha", name = "Alpha Hunter", rarity = "EPIC", imageUrl = "https://cdn.example.com/alpha.png", description = "Win as the alpha." },
+                new { badgeId = "badge_beta", name = "Beta Guard", rarity = "RARE", imageUrl = "https://cdn.example.com/beta.png", description = "Protect the pack." }
             })));
 
         _app.MapGet("/players/{playerId}", (string playerId, HttpRequest request) =>
@@ -171,6 +225,25 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
                 var target = Math.Clamp(mutation.NewRank, 1, _allTimeHighscores.Count);
                 _allTimeHighscores.Remove(entry);
                 _allTimeHighscores.Insert(target - 1, entry);
+            }
+
+            return Results.Ok();
+        });
+
+        _app.MapPut("/_test/ranked", (RankedMutation mutation) =>
+        {
+            lock (_sync)
+            {
+                var index = _rankedTop.FindIndex(r => r.Username.Equals(mutation.Username, StringComparison.OrdinalIgnoreCase));
+                if (index < 0)
+                {
+                    return Results.NotFound();
+                }
+
+                var entry = _rankedTop[index];
+                var target = Math.Clamp(mutation.NewRank, 1, _rankedTop.Count);
+                _rankedTop.RemoveAt(index);
+                _rankedTop.Insert(target - 1, entry with { Skill = entry.Skill + mutation.SkillDelta });
             }
 
             return Results.Ok();
@@ -302,6 +375,14 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
         }
     }
 
+    private List<object> SnapshotRanked()
+    {
+        lock (_sync)
+        {
+            return _rankedTop.Select(r => (object)new { playerId = r.PlayerId, username = r.Username, skill = r.Skill }).ToList();
+        }
+    }
+
     private sealed record PlayerFixture(string Id, string Username, string? ClanId, int Level, string[] BadgeIds)
     {
         public string? ClanId { get; set; } = ClanId;
@@ -322,4 +403,8 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
     private sealed record HighscoreMutation(string Username, int NewRank);
 
     private sealed record HighscoreFixture(string PlayerId, string Username, long Xp);
+
+    private sealed record RankedMutation(string Username, int NewRank, int SkillDelta);
+
+    private sealed record RankedFixture(string PlayerId, string Username, int Skill);
 }
