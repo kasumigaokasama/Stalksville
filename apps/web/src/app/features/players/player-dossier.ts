@@ -120,6 +120,9 @@ export class PlayerDossier {
           this.dossierResource.reload();
           this.snapshotsResource.reload();
           this.progressionResource.reload();
+          // Derived intelligence on the Intelligence tab must follow a refresh too.
+          this.exposureResource.reload();
+          this.insightsResource.reload();
         },
         error: () => {
           this.refreshing.set(false);
