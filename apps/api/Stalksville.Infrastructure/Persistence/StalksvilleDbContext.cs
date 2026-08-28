@@ -37,6 +37,8 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
 
     public DbSet<AlertRead> AlertReads => Set<AlertRead>();
 
+    public DbSet<WatchEntry> Watchlist => Set<WatchEntry>();
+
     public DbSet<ExposureAssessment> ExposureAssessments => Set<ExposureAssessment>();
 
     public DbSet<HighscoreEntry> HighscoreEntries => Set<HighscoreEntry>();
@@ -284,6 +286,13 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.ToTable("alert_reads");
             e.HasKey(x => new { x.AlertId, x.UserId });
             e.HasIndex(x => x.UserId);
+        });
+
+        modelBuilder.Entity<WatchEntry>(e =>
+        {
+            e.ToTable("watchlist");
+            e.HasIndex(x => new { x.UserId, x.PlayerId }).IsUnique();
+            e.HasIndex(x => x.PlayerId);
         });
 
         modelBuilder.Entity<ExposureAssessment>(e =>

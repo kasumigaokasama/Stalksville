@@ -10,6 +10,12 @@
         <div class="stl-subtitle mono">ID {{ d.player.wolvesvillePlayerId }} · first seen {{ formatRelative(d.player.firstSeenAt) }}</div>
       </div>
       <div class="header-actions">
+        <button class="stl-button watch-toggle" type="button" (click)="toggleWatch()"
+                [class.watched]="watched()"
+                [attr.aria-pressed]="watched()"
+                [title]="watched() ? 'Remove from your watchlist' : 'Add to your watchlist (refreshed first by the worker)'">
+          {{ watched() ? '★ Watching' : '☆ Watch' }}
+        </button>
         @if (refreshNote(); as note) {
           <span class="refresh-note">{{ note }}</span>
         }

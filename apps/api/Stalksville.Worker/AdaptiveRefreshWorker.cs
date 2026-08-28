@@ -86,11 +86,15 @@ public sealed class AdaptiveRefreshWorker(
         var recent = await players.GetRecentAsync(1000, cancellationToken);
         var now = DateTimeOffset.UtcNow;
 
+        // Watched players (starred by any user) jump the refresh queue; the min interval still applies.
+        var watchedIds = await scope.ServiceProvider.GetRequiredService<IWatchStore>().GetWatchedPlayerIdsAsync(cancellationToken);
+
         var plan = RefreshScheduler.Plan(
             recent.Select(p => new RefreshCandidate(p.Id, p.WolvesvillePlayerId, p.Username, p.LastSeenAt)).ToList(),
             now,
             maxPerRun,
-            minInterval);
+            minInterval,
+            watchedIds);
 
         if (plan.Selected.Count == 0)
         {

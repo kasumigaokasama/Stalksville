@@ -4,7 +4,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth';
-import { PlayerLookupResultDto, PlayerSummaryDto } from '../../core/api/api.model';
+import { PlayerLookupResultDto, PlayerSummaryDto, WatchedPlayerDto } from '../../core/api/api.model';
 import { formatRelative } from '../../shared/util/format';
 
 @Component({
@@ -20,6 +20,7 @@ export class Players {
 
   /** Local search term, applied on submit (or per keystroke for tracked players). */
   protected readonly query = signal('');
+  protected readonly watchedOnly = signal(false);
   protected readonly lookupName = signal('');
   protected readonly lookupBusy = signal(false);
   protected readonly lookupError = signal<string | null>(null);
@@ -31,9 +32,16 @@ export class Players {
       : '/api/v1/players',
   );
 
-  protected readonly players = computed(() =>
-    this.playersResource.hasValue() ? this.playersResource.value() ?? [] : [],
+  private readonly watchlistResource = httpResource<WatchedPlayerDto[]>(() => '/api/v1/watchlist');
+
+  protected readonly watchedIds = computed(() =>
+    new Set((this.watchlistResource.hasValue() ? this.watchlistResource.value() ?? [] : []).map((w) => w.id)),
   );
+
+  protected readonly players = computed(() => {
+    const all = this.playersResource.hasValue() ? this.playersResource.value() ?? [] : [];
+    return this.watchedOnly() ? all.filter((p) => this.watchedIds().has(p.id)) : all;
+  });
   protected readonly isLoading = computed(() => this.playersResource.isLoading());
 
   /** Live exact-username lookup against Wolvesville — imports the player. */

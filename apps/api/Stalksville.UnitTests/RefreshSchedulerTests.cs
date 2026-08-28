@@ -50,6 +50,36 @@ public sealed class RefreshSchedulerTests
         var plan = RefreshScheduler.Plan([], Now);
         Assert.Empty(plan.Selected);
     }
+
+    [Fact]
+    public void WatchedPlayers_JumpTheQueue_AmongDueCandidates()
+    {
+        var watchedId = Guid.NewGuid();
+        var candidates = new[]
+        {
+            Player("oldest-unwatched", Now.AddHours(-10)),
+            new RefreshCandidate(watchedId, "id-watched", "watched-recent", Now.AddHours(-2)),
+            Player("middling-unwatched", Now.AddHours(-5))
+        };
+
+        var plan = RefreshScheduler.Plan(candidates, Now, maxPerRun: 2, minIntervalMinutes: 60, watchedPlayerIds: [watchedId]);
+
+        Assert.Equal(2, plan.Selected.Count);
+        Assert.Equal("watched-recent", plan.Selected[0].Username); // starred first despite being newer
+        Assert.Equal("oldest-unwatched", plan.Selected[1].Username);
+    }
+
+    [Fact]
+    public void WatchedPlayers_StillRespectTheMinimumInterval()
+    {
+        var watchedId = Guid.NewGuid();
+        var candidates = new[] { new RefreshCandidate(watchedId, "id-watched", "watched-fresh", Now.AddMinutes(-5)) };
+
+        var plan = RefreshScheduler.Plan(candidates, Now, maxPerRun: 5, minIntervalMinutes: 60, watchedPlayerIds: [watchedId]);
+
+        Assert.Empty(plan.Selected);
+        Assert.Equal(1, plan.SkippedTooRecent);
+    }
 }
 
 public sealed class InvestigationFactsTests

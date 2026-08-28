@@ -33,6 +33,10 @@
   <section class="stl-card">
     <div class="list-head">
       <h2>Tracked players <span class="stl-tag stl-tag--observed">observed</span></h2>
+      <label class="stl-check watched-filter">
+        <input type="checkbox" [checked]="watchedOnly()" (change)="watchedOnly.set($any($event.target).checked)" />
+        ★ watched only
+      </label>
       <input
         class="stl-input list-search"
         type="search"
@@ -54,7 +58,12 @@
         <tbody>
           @for (player of players(); track player.id) {
             <tr>
-              <td><a [routerLink]="['/players', player.id]">{{ player.username }}</a></td>
+              <td>
+                @if (watchedIds().has(player.id)) {
+                  <span class="watch-star" title="on your watchlist">★</span>
+                }
+                <a [routerLink]="['/players', player.id]">{{ player.username }}</a>
+              </td>
               <td class="mono muted">{{ player.wolvesvillePlayerId }}</td>
               <td class="muted">
                 @if (player.currentClanId; as clanId) {

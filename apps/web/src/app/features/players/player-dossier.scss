@@ -285,6 +285,13 @@
   font-size: 12px;
 }
 
+.watch-toggle {
+  &.watched {
+    color: var(--stl-warning, #fbbf24);
+    border-color: var(--stl-warning, #fbbf24);
+  }
+}
+
 .friend-list {
   list-style: none;
   margin: 0;

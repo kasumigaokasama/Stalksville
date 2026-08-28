@@ -7,6 +7,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth';
 import { Catalog } from '../../core/catalog/catalog';
+import { WatchedPlayerDto } from '../../core/api/api.model';
 import {
   ChangeDto,
   ExposureResultDto,
@@ -43,6 +44,26 @@ export class PlayerDossier {
   private readonly progressionResource = httpResource<ProgressionDto>(() => `/api/v1/players/${this.id()}/progression`);
   private readonly exposureResource = httpResource<ExposureResultDto>(() => `/api/v1/players/${this.id()}/exposure`);
   private readonly insightsResource = httpResource<InsightDto[]>(() => `/api/v1/players/${this.id()}/insights`);
+
+  // ---- watchlist (personal star, any role) ----
+  private readonly watchlistResource = httpResource<WatchedPlayerDto[]>(() => '/api/v1/watchlist');
+  protected readonly watched = computed(() =>
+    (this.watchlistResource.hasValue() ? this.watchlistResource.value() ?? [] : [])
+      .some((w) => w.id === this.id()),
+  );
+
+  protected async toggleWatch(): Promise<void> {
+    try {
+      if (this.watched()) {
+        await firstValueFrom(this.http.delete(`/api/v1/players/${this.id()}/watch`));
+      } else {
+        await firstValueFrom(this.http.post(`/api/v1/players/${this.id()}/watch`, null));
+      }
+      this.watchlistResource.reload();
+    } catch {
+      this.refreshNote.set('Could not update the watchlist.');
+    }
+  }
 
   protected readonly dossier = computed(() => (this.dossierResource.hasValue() ? this.dossierResource.value() : null));
   protected readonly snapshots = computed(() =>

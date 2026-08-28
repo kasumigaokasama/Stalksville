@@ -239,6 +239,14 @@ public sealed record SearchHitDto(
     string Title,
     string? Subtitle);
 
+// ---- Watchlist (per-user starred players) ----
+
+public sealed record WatchedPlayerDto(
+    Guid Id,
+    string WolvesvillePlayerId,
+    string Username,
+    DateTimeOffset StarredAt);
+
 public sealed record DerivedDto(
     int TotalChanges,
     IReadOnlyList<ChangeDto> RecentChanges,

@@ -83,6 +83,32 @@ test.describe('Collaboration & UX (expansion round 2)', () => {
     await expect(menu).toHaveAttribute('aria-expanded', 'false');
   });
 
+  test('watchlist: star a player from the dossier and filter by watched', async ({ page }) => {
+    await login(page);
+
+    // Open a tracked player's dossier (the palette import makes this self-sufficient).
+    await page.keyboard.press('Control+k');
+    const palette = page.getByRole('dialog', { name: 'Command palette' });
+    await palette.getByPlaceholder(/Search…/).fill('player:nightowl');
+    await expect(palette.getByRole('button', { name: /open dossier/ })).toBeVisible({ timeout: 15_000 });
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { name: 'nightowl', exact: true })).toBeVisible();
+
+    // Star it — idempotent on re-runs of the persistent database.
+    const watchToggle = page.getByRole('button', { name: /Watch/ });
+    if (!(await watchToggle.getAttribute('aria-pressed'))?.includes('true')) {
+      await watchToggle.click();
+    }
+    await expect(page.getByRole('button', { name: '★ Watching' })).toBeVisible({ timeout: 15_000 });
+
+    // The players page shows the star and the watched-only filter keeps the row.
+    await page.getByRole('link', { name: 'Players' }).click();
+    await expect(page.locator('.stl-table tbody tr', { hasText: 'nightowl' }).locator('.watch-star')).toBeVisible();
+    await page.locator('.watched-filter input').check();
+    await expect(page.locator('.stl-table tbody tr')).toHaveCount(1, { timeout: 15_000 });
+    await expect(page.locator('.stl-table tbody tr')).toContainText('nightowl');
+  });
+
   test('erase confirmation requires a typed reason and cancels cleanly', async ({ page }) => {
     await login(page);
 

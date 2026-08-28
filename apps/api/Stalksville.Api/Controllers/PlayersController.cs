@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stalksville.Api.Security;
+using Stalksville.Application.Abstractions;
 using Stalksville.Application.Advanced;
 using Stalksville.Application.Models;
 using Stalksville.Application.Players;
@@ -9,8 +10,14 @@ namespace Stalksville.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/players")]
-public sealed class PlayersController(PlayerService players, PlayerIntelligenceService intelligence) : ControllerBase
+public sealed class PlayersController(
+    PlayerService players,
+    PlayerIntelligenceService intelligence,
+    IWatchStore watch) : ControllerBase
 {
+    private Guid UserId => Guid.TryParse(User.FindFirst("sub")?.Value, out var id)
+        ? id
+        : throw new UnauthorizedAccessException("No user claim on the token.");
     private string Actor => User.FindFirst("name")?.Value ?? "unknown";
 
     /// <summary>Local (already tracked) players matching a username fragment.</summary>
@@ -130,6 +137,24 @@ public sealed class PlayersController(PlayerService players, PlayerIntelligenceS
         var (total, changes) = await players.GetChangesAsync(id, limit, offset, cancellationToken);
         Response.Headers["X-Total-Count"] = total.ToString();
         return Ok(changes);
+    }
+
+    /// <summary>Stars a player for the calling user (any role — personal bookkeeping only).</summary>
+    [HttpPost("{id:guid}/watch")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Watch(Guid id, CancellationToken cancellationToken)
+    {
+        await watch.AddAsync(UserId, id, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Removes the calling user's star from a player.</summary>
+    [HttpDelete("{id:guid}/watch")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Unwatch(Guid id, CancellationToken cancellationToken)
+    {
+        await watch.RemoveAsync(UserId, id, cancellationToken);
+        return NoContent();
     }
 
     private static async Task<IReadOnlyList<PlayerSummaryDto>> ToRecentAsync(PlayerService service, CancellationToken ct)

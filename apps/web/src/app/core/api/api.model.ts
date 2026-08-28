@@ -44,6 +44,13 @@ export interface AuditEntryDto {
   occurredAt: string;
 }
 
+export interface WatchedPlayerDto {
+  id: string;
+  wolvesvillePlayerId: string;
+  username: string;
+  starredAt: string;
+}
+
 export interface PlayerSummaryDto {
   id: string;
   wolvesvillePlayerId: string;
