@@ -33,7 +33,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=stalksville;Username=stalksville;Password=stalksville
-      ConnectionStrings__Redis: Host=redis;Port=6379  # plain host:port for StackExchange.Redis
+      ConnectionStrings__Redis: redis:6379  # StackExchange.Redis format, not Npgsql style
       WOLVESVILLE__MODE: ${WOLVESVILLE_MODE:-Real}
       WOLVESVILLE__APIKEY: ${WOLVESVILLE_APIKEY:-}
       AUTH__ADMINPASSWORD: ${STALKSVILLE_ADMIN_PASSWORD:-}
@@ -56,7 +56,7 @@ services:
     environment:
       DOTNET_ENVIRONMENT: Production
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=stalksville;Username=stalksville;Password=stalksville
-      ConnectionStrings__Redis: Host=redis;Port=6379
+      ConnectionStrings__Redis: redis:6379
       WOLVESVILLE__MODE: ${WOLVESVILLE_MODE:-Real}
       WOLVESVILLE__APIKEY: ${WOLVESVILLE_APIKEY:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
