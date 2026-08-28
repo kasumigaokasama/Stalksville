@@ -151,6 +151,26 @@ public sealed class WolvesvilleClient(
     private static ObservedRankedEntry ToRankedEntry(RankedLeaderboardPlayerDto player) =>
         new(player.PlayerId, player.Username, player.Skill);
 
+    public async Task<ObservedHallOfFame> GetHallOfFameAsync(int seasonNumber, bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        var cacheKey = $"wolvesville:hall-of-fame:{seasonNumber}";
+
+        if (!bypassCache && await cache.GetAsync<ObservedHallOfFame>(cacheKey, cancellationToken) is { } cached)
+        {
+            logger.LogDebug("Wolvesville cache hit for ranked/hallOfFame/{Season}", seasonNumber);
+            return cached;
+        }
+
+        var dto = await GetAsync<SeasonWinnersDto>($"ranked/hallOfFame/{seasonNumber}", cancellationToken);
+        var result = new ObservedHallOfFame(
+            dto.SeasonNumber,
+            [.. dto.Winners.Select(w => new ObservedHallOfFameWinner(w.PlayerId, w.PlayerName, w.EquippedAvatar?.Url))],
+            $"wolvesville:GET /ranked/hallOfFame/{seasonNumber}");
+
+        await cache.SetAsync(cacheKey, result, CachePolicy.HallOfFameTtl, cancellationToken);
+        return result;
+    }
+
     public async Task<ObservedRankedSeason> GetRankedSeasonAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
     {
         const string cacheKey = "wolvesville:ranked-season";

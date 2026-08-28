@@ -25,3 +25,29 @@ public sealed class RankedEntry
 
     public DateTimeOffset CapturedAt { get; set; }
 }
+
+/// <summary>
+/// One winner of a finished ranked season (observed, append-only per season). Position is the
+/// array order of the upstream winners list — the API returns no explicit rank.
+/// </summary>
+public sealed class HallOfFameEntry
+{
+    public Guid Id { get; set; }
+
+    public int SeasonNumber { get; set; }
+
+    public int Position { get; set; }
+
+    public string WolvesvillePlayerId { get; set; } = string.Empty;
+
+    public string PlayerName { get; set; } = string.Empty;
+
+    public string PlayerNameLower { get; set; } = string.Empty;
+
+    public string? AvatarUrl { get; set; }
+
+    /// <summary>Resolved tracked player (by name), so winners can deep-link dossiers.</summary>
+    public Guid? PlayerId { get; set; }
+
+    public DateTimeOffset CapturedAt { get; set; }
+}

@@ -112,6 +112,26 @@ public sealed class MockWolvesvilleClient(ILogger<MockWolvesvilleClient> logger)
             "mock:GET /ranked/season"));
     }
 
+    public Task<ObservedHallOfFame> GetHallOfFameAsync(int seasonNumber, bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        if (seasonNumber >= 21)
+        {
+            throw new WolvesvilleApiException(404, $"Mock: no finished season {seasonNumber}.");
+        }
+
+        // Season 20 winners include a tracked demo player so matching and alerts can be exercised.
+        ObservedHallOfFame result = new(
+            20,
+        [
+            new ObservedHallOfFameWinner("99010", "FrostReign", "https://cdn.example.com/frost.png"),
+            new ObservedHallOfFameWinner("1004", "talon", "https://cdn.example.com/talon.png"),
+            new ObservedHallOfFameWinner("99011", "VexHowl", null),
+        ],
+            $"mock:GET /ranked/hallOfFame/{seasonNumber}");
+
+        return Task.FromResult(result);
+    }
+
     public Task<IReadOnlyList<ObservedCatalogItem>> GetProfileIconsAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
     {
         IReadOnlyList<ObservedCatalogItem> icons =

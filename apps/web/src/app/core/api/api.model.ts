@@ -347,6 +347,29 @@ export interface RankedCaptureResultDto {
   rankShiftAlerts: number;
 }
 
+export interface HallOfFameRowDto {
+  position: number;
+  playerName: string;
+  wolvesvillePlayerId: string;
+  avatarUrl: string | null;
+  playerId: string | null;
+  tracked: boolean;
+}
+
+export interface HallOfFameBoardDto {
+  seasonNumber: number;
+  capturedAt: string | null;
+  rows: HallOfFameRowDto[];
+  availableSeasons: number[];
+}
+
+export interface HallOfFameCaptureResultDto {
+  capturedAt: string;
+  seasonNumber: number;
+  entriesStored: number;
+  trackedWinnerAlerts: number;
+}
+
 export interface CatalogItemDto {
   kind: string;
   externalId: string;

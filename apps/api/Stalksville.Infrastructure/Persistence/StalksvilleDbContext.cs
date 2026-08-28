@@ -41,6 +41,8 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
 
     public DbSet<RankedEntry> RankedEntries => Set<RankedEntry>();
 
+    public DbSet<HallOfFameEntry> HallOfFameEntries => Set<HallOfFameEntry>();
+
     public DbSet<CatalogItem> CatalogItems => Set<CatalogItem>();
 
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
@@ -247,6 +249,19 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             // Append-only board: one row per (season, capture, rank).
             e.HasIndex(x => new { x.SeasonNumber, x.CapturedAt, x.Rank }).IsUnique();
             e.HasIndex(x => x.UsernameLower);
+            e.HasIndex(x => x.PlayerId);
+        });
+
+        modelBuilder.Entity<HallOfFameEntry>(e =>
+        {
+            e.ToTable("hall_of_fame_entries");
+            e.Property(x => x.WolvesvillePlayerId).HasMaxLength(64);
+            e.Property(x => x.PlayerName).HasMaxLength(64);
+            e.Property(x => x.PlayerNameLower).HasMaxLength(64);
+            e.Property(x => x.AvatarUrl).HasMaxLength(512);
+            // Finished seasons are immutable: one row per (season, position).
+            e.HasIndex(x => new { x.SeasonNumber, x.Position }).IsUnique();
+            e.HasIndex(x => x.PlayerNameLower);
             e.HasIndex(x => x.PlayerId);
         });
 

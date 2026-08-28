@@ -219,6 +219,42 @@ internal sealed class RankedSeasonInfoDto
     public int? StartSkillDefault { get; set; }
 }
 
+/// <summary>Spec schema PublicGetImage — avatar image reference.</summary>
+internal sealed class PublicImageDto
+{
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+
+    [JsonPropertyName("width")]
+    public int? Width { get; set; }
+
+    [JsonPropertyName("height")]
+    public int? Height { get; set; }
+}
+
+/// <summary>Spec schema SeasonWinner — one winner of a finished season.</summary>
+internal sealed class SeasonWinnerDto
+{
+    [JsonPropertyName("playerId")]
+    public string PlayerId { get; set; } = string.Empty;
+
+    [JsonPropertyName("playerName")]
+    public string PlayerName { get; set; } = string.Empty;
+
+    [JsonPropertyName("equippedAvatar")]
+    public PublicImageDto? EquippedAvatar { get; set; }
+}
+
+/// <summary>Spec schema SeasonWinners — GET /ranked/hallOfFame/{seasonNumber}.</summary>
+internal sealed class SeasonWinnersDto
+{
+    [JsonPropertyName("seasonNumber")]
+    public int SeasonNumber { get; set; }
+
+    [JsonPropertyName("winners")]
+    public List<SeasonWinnerDto> Winners { get; set; } = [];
+}
+
 /// <summary>Spec schema ProfileIcon — GET /items/profileIcons.</summary>
 internal sealed class ProfileIconDto
 {

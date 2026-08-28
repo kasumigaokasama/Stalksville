@@ -15,7 +15,7 @@ test.describe('Ranked (mock Wolvesville)', () => {
     await login(page);
 
     await page.getByRole('link', { name: 'Ranked' }).click();
-    await expect(page.getByRole('heading', { name: 'Ranked leaderboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ranked', exact: true })).toBeVisible();
 
     // Season context from GET /ranked/season.
     await expect(page.getByRole('heading', { name: 'Season 21' })).toBeVisible({ timeout: 20_000 });
@@ -36,5 +36,28 @@ test.describe('Ranked (mock Wolvesville)', () => {
       await expect(page.getByText(/Imported talon/)).toBeVisible({ timeout: 20_000 });
     }
     await expect(talonRow.getByText('tracked')).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('hall of fame lists finished-season winners with tracked links', async ({ page }) => {
+    await login(page);
+
+    await page.getByRole('link', { name: 'Ranked' }).click();
+    await page.getByRole('tab', { name: 'Hall of fame' }).click();
+
+    await page.getByRole('button', { name: 'Capture now' }).click();
+    await expect(page.getByText(/Captured 3 season-20 winners/)).toBeVisible({ timeout: 20_000 });
+
+    // The mock season 20 includes talon among the winners; tracked winners deep-link.
+    const talonRow = page.locator('.stl-table tbody tr', { hasText: 'talon' });
+    const trackButton = talonRow.getByRole('button', { name: 'Track' });
+    if (await trackButton.count() > 0) {
+      await trackButton.click();
+      await expect(page.getByText(/Imported talon/)).toBeVisible({ timeout: 20_000 });
+    }
+    await expect(talonRow.getByText('tracked')).toBeVisible({ timeout: 15_000 });
+
+    // Untracked winners keep their identity row with an avatar.
+    const frostRow = page.locator('.stl-table tbody tr', { hasText: 'FrostReign' });
+    await expect(frostRow.locator('img.winner-avatar')).toBeVisible();
   });
 });

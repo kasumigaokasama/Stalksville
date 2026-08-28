@@ -106,6 +106,83 @@ public sealed class RankedService(
             season.Source);
     }
 
+    /// <summary>
+    /// Captures one finished season's winners (default: the season before the current one).
+    /// Tracked winners raise a one-time HallOfFameEntry alert — every alert cites the capture.
+    /// </summary>
+    public async Task<HallOfFameCaptureResultDto> CaptureHallOfFameAsync(int? seasonNumber = null, bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        var season = seasonNumber ?? (await wolvesville.GetRankedSeasonAsync(cancellationToken: cancellationToken)).Number - 1;        var observed = await wolvesville.GetHallOfFameAsync(season, bypassCache, cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+
+        var entries = new List<HallOfFameEntry>();
+        for (var index = 0; index < observed.Winners.Count; index++)
+        {
+            var winner = observed.Winners[index];
+            entries.Add(new HallOfFameEntry
+            {
+                Id = Guid.NewGuid(),
+                SeasonNumber = observed.SeasonNumber,
+                Position = index + 1,
+                WolvesvillePlayerId = winner.WolvesvillePlayerId,
+                PlayerName = winner.PlayerName,
+                PlayerNameLower = winner.PlayerName.ToLowerInvariant(),
+                AvatarUrl = winner.AvatarUrl,
+                CapturedAt = now
+            });
+        }
+
+        var stored = await ranked.ReplaceHallOfFameCaptureAsync(entries, cancellationToken);
+        var raised = 0;
+        foreach (var entry in entries.Where(e => e.PlayerId is not null))
+        {
+            await alerts.AddIfNewAsync(
+            [
+                new AlertCandidate(
+                    AlertKinds.HallOfFameEntry,
+                    AlertSeverity.Info,
+                    $"{entry.PlayerName} is a season {entry.SeasonNumber} ranked winner",
+                    $"Finished in the top of ranked season {entry.SeasonNumber} (observed in the hall of fame, position {entry.Position}).",
+                    JsonSerializer.Serialize(new
+                    {
+                        playerId = entry.PlayerId,
+                        season = entry.SeasonNumber,
+                        position = entry.Position,
+                        wolvesvillePlayerId = entry.WolvesvillePlayerId,
+                        capturedAt = now
+                    }, EvidenceJson),
+                    $"{AlertKinds.HallOfFameEntry}:{entry.PlayerId}:{entry.SeasonNumber}")
+            ], EntityType.Player, entry.PlayerId!.Value, entry.PlayerName, now, cancellationToken);
+            raised++;
+        }
+
+        logger.LogInformation("Hall of fame capture: season {Season}, {Stored} winners, {Alerts} tracked-winner alert(s)",
+            observed.SeasonNumber, stored, raised);
+
+        return new HallOfFameCaptureResultDto(now, observed.SeasonNumber, stored, raised);
+    }
+
+    public async Task<HallOfFameBoardDto> GetHallOfFameAsync(int? seasonNumber = null, CancellationToken cancellationToken = default)
+    {
+        var seasons = await ranked.GetHallOfFameSeasonsAsync(cancellationToken);
+        var season = seasonNumber ?? (seasons.Count > 0 ? seasons[0] : 0);
+
+        var entries = await ranked.GetHallOfFameAsync(season, cancellationToken);
+        var rows = entries.Select(e => new HallOfFameRowDto(
+            e.Position,
+            e.PlayerName,
+            e.WolvesvillePlayerId,
+            e.AvatarUrl,
+            e.PlayerId,
+            e.PlayerId is not null)).ToList();
+
+        return new HallOfFameBoardDto(
+            season,
+            entries.Count > 0 ? entries[0].CapturedAt : null,
+            rows,
+            seasons);
+    }
+
     private async Task<int> DeriveRankShiftsAsync(int seasonNumber, CancellationToken cancellationToken)
     {
         var latest = await ranked.GetLatestAsync(cancellationToken);

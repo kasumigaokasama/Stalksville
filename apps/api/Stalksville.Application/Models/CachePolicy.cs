@@ -20,6 +20,9 @@ public static class CachePolicy
     /// <summary>Seasons last weeks; the season label hardly ever changes.</summary>
     public static readonly TimeSpan RankedSeasonTtl = TimeSpan.FromHours(24);
 
+    /// <summary>Finished seasons never change — cache per season number.</summary>
+    public static readonly TimeSpan HallOfFameTtl = TimeSpan.FromHours(24);
+
     /// <summary>Catalogs gain items slowly; names for existing ids are stable upstream.</summary>
     public static readonly TimeSpan CatalogTtl = TimeSpan.FromHours(24);
 

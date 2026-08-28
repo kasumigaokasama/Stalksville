@@ -58,6 +58,18 @@ public sealed record ObservedRankedLeaderboard(
     IReadOnlyList<ObservedRankedEntry> Top,
     string Source);
 
+/// <summary>One winner of a finished season (spec SeasonWinner); position is array order.</summary>
+public sealed record ObservedHallOfFameWinner(
+    string WolvesvillePlayerId,
+    string PlayerName,
+    string? AvatarUrl);
+
+/// <summary>Spec schema SeasonWinners — GET /ranked/hallOfFame/{seasonNumber}.</summary>
+public sealed record ObservedHallOfFame(
+    int SeasonNumber,
+    IReadOnlyList<ObservedHallOfFameWinner> Winners,
+    string Source);
+
 /// <summary>Season subset of spec RankedSeasonInfo — enough to label captures and show context.</summary>
 public sealed record ObservedRankedSeason(
     int Number,

@@ -36,6 +36,9 @@ public interface IWolvesvilleClient
     /// <summary>Ranked leaderboard: GET /ranked/leaderboard (ranksTop; rank is array order).</summary>
     Task<ObservedRankedLeaderboard> GetRankedLeaderboardAsync(bool bypassCache = false, CancellationToken cancellationToken = default);
 
+    /// <summary>Winners of a finished season: GET /ranked/hallOfFame/{seasonNumber}. 404s for unknown seasons.</summary>
+    Task<ObservedHallOfFame> GetHallOfFameAsync(int seasonNumber, bool bypassCache = false, CancellationToken cancellationToken = default);
+
     /// <summary>Current ranked season: GET /ranked/season (season number + window).</summary>
     Task<ObservedRankedSeason> GetRankedSeasonAsync(bool bypassCache = false, CancellationToken cancellationToken = default);
 

@@ -21,8 +21,55 @@
 .table-meta {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 1rem;
   margin-bottom: 0.5rem;
   color: var(--stl-text-dim, #8b93a7);
   font-size: 0.8rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--stl-border-strong, #2d3550);
+  border-radius: var(--stl-radius-sm, 5px);
+  overflow: hidden;
+
+  button {
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    color: var(--stl-text-muted, #8b93a7);
+    font-family: var(--stl-font);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+
+    &.active {
+      background: var(--stl-accent-soft, rgba(124, 154, 255, 0.15));
+      color: var(--stl-accent, #7c9aff);
+    }
+  }
+}
+
+.season-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+
+  select {
+    width: 90px;
+  }
+}
+
+.winner-avatar {
+  display: block;
+  border-radius: 3px;
 }

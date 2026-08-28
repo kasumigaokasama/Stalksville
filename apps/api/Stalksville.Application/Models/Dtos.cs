@@ -201,6 +201,26 @@ public sealed record RankedCaptureResultDto(
     int EntriesStored,
     int RankShiftAlerts);
 
+public sealed record HallOfFameRowDto(
+    int Position,
+    string PlayerName,
+    string WolvesvillePlayerId,
+    string? AvatarUrl,
+    Guid? PlayerId,
+    bool Tracked);
+
+public sealed record HallOfFameBoardDto(
+    int SeasonNumber,
+    DateTimeOffset? CapturedAt,
+    IReadOnlyList<HallOfFameRowDto> Rows,
+    IReadOnlyList<int> AvailableSeasons);
+
+public sealed record HallOfFameCaptureResultDto(
+    DateTimeOffset CapturedAt,
+    int SeasonNumber,
+    int EntriesStored,
+    int TrackedWinnerAlerts);
+
 // ---- Cosmetics catalog (observed reference data: ids → display names) ----
 
 public sealed record CatalogItemDto(

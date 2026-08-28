@@ -16,4 +16,13 @@ public interface IRankedStore
 
     /// <summary>When the last capture happened; null when never captured.</summary>
     Task<DateTimeOffset?> GetLastCaptureAtAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces one season's winners (idempotent re-capture) and resolves tracked-player matches by name; returns the stored count.</summary>
+    Task<int> ReplaceHallOfFameCaptureAsync(IReadOnlyList<HallOfFameEntry> entries, CancellationToken cancellationToken = default);
+
+    /// <summary>One season's winners ordered by position; empty when the season was never captured.</summary>
+    Task<IReadOnlyList<HallOfFameEntry>> GetHallOfFameAsync(int seasonNumber, CancellationToken cancellationToken = default);
+
+    /// <summary>All captured hall-of-fame seasons, newest first.</summary>
+    Task<IReadOnlyList<int>> GetHallOfFameSeasonsAsync(CancellationToken cancellationToken = default);
 }

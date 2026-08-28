@@ -27,6 +27,23 @@ public sealed class RankedController(RankedService ranked) : ControllerBase
         return Ok(await ranked.GetSeasonAsync(cancellationToken));
     }
 
+    /// <summary>Winners of a finished season (default: the most recently captured one).</summary>
+    [HttpGet("hall-of-fame")]
+    [ProducesResponseType<HallOfFameBoardDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> HallOfFame([FromQuery] int? season, CancellationToken cancellationToken)
+    {
+        return Ok(await ranked.GetHallOfFameAsync(season, cancellationToken));
+    }
+
+    /// <summary>Captures a finished season's winners now (default: previous season) and alerts on tracked winners.</summary>
+    [HttpPost("hall-of-fame/capture")]
+    [Authorize(Policy = Policies.Analyst)]
+    [ProducesResponseType<HallOfFameCaptureResultDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> CaptureHallOfFame([FromQuery] int? season, CancellationToken cancellationToken)
+    {
+        return Ok(await ranked.CaptureHallOfFameAsync(season, bypassCache: true, cancellationToken));
+    }
+
     /// <summary>Captures the board now and derives rank-shift alerts for tracked players.</summary>
     [HttpPost("capture")]
     [Authorize(Policy = Policies.Analyst)]

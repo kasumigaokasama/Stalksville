@@ -77,6 +77,7 @@ public sealed class AdaptiveRefreshWorker(
         await RunRetentionAsync(scope.ServiceProvider, configuration, cancellationToken);
         await CaptureHighscoresIfDueAsync(scope.ServiceProvider, cancellationToken);
         await CaptureRankedIfDueAsync(scope.ServiceProvider, cancellationToken);
+        await CaptureHallOfFameIfDueAsync(scope.ServiceProvider, cancellationToken);
         await RefreshCatalogsIfDueAsync(scope.ServiceProvider, cancellationToken);
 
         var maxPerRun = Math.Max(1, configuration.GetValue("Worker:MaxPerRun", 5));
@@ -185,6 +186,41 @@ public sealed class AdaptiveRefreshWorker(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Ranked capture failed; retrying next cycle");
+        }
+    }
+
+    /// <summary>Finished seasons are immutable: each is captured once, when first seen.</summary>
+    private async Task CaptureHallOfFameIfDueAsync(IServiceProvider scoped, CancellationToken cancellationToken)
+    {
+        var ranked = scoped.GetRequiredService<Application.Advanced.RankedService>();
+        var store = scoped.GetRequiredService<IRankedStore>();
+
+        int previousSeason;
+        try
+        {
+            previousSeason = (await ranked.GetSeasonAsync(cancellationToken)).Number - 1;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Ranked season fetch failed; hall-of-fame capture skipped this cycle");
+            return;
+        }
+
+        var captured = await store.GetHallOfFameAsync(previousSeason, cancellationToken);
+        if (captured.Count > 0)
+        {
+            return; // already captured — finished seasons never change
+        }
+
+        try
+        {
+            var result = await ranked.CaptureHallOfFameAsync(previousSeason, cancellationToken: cancellationToken);
+            logger.LogInformation("Hall of fame capture: season {Season}, {Winners} winners, {Alerts} tracked-winner alert(s)",
+                result.SeasonNumber, result.EntriesStored, result.TrackedWinnerAlerts);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Hall of fame capture failed; retrying next cycle");
         }
     }
 

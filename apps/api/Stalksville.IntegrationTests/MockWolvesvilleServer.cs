@@ -138,6 +138,20 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
                 goldPrizeWinAsSolo = 30
             })));
 
+        _app.MapGet("/ranked/hallOfFame/{seasonNumber:int}", (int seasonNumber, HttpRequest request) =>
+            Handle(request, () => seasonNumber == 20 && _playersByUsername.TryGetValue("luna", out var luna)
+                ? Results.Json(new
+                {
+                    seasonNumber = 20,
+                    winners = new object[]
+                    {
+                        new { playerId = "9104", playerName = "FrostReign", equippedAvatar = new { url = "https://cdn.example.com/frost.png", width = 81, height = 113 } },
+                        new { playerId = luna.Id, playerName = luna.Username, equippedAvatar = new { url = "https://cdn.example.com/luna.png", width = 81, height = 113 } },
+                        new { playerId = "9105", playerName = "VexHowl", equippedAvatar = new { url = "https://cdn.example.com/vex.png", width = 81, height = 113 } }
+                    }
+                })
+                : Results.NotFound(Error($"No hall of fame for season {seasonNumber}"))));
+
         _app.MapGet("/items/profileIcons", (HttpRequest request) =>
             Handle(request, () => Results.Json(new object[]
             {

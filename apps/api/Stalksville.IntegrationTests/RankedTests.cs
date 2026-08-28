@@ -140,6 +140,48 @@ public sealed class RankedTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact]
+    public async Task HallOfFame_CaptureStoresWinnersAndAlertsTrackedPlayers()
+    {
+        // Track luna first so the capture resolves her winner row to a dossier.
+        var lookup = await _client.GetAsync("/api/v1/players/lookup?username=luna");
+        lookup.EnsureSuccessStatusCode();
+
+        var capture = await _client.PostAsync("/api/v1/ranked/hall-of-fame/capture?season=20", content: null);
+        Assert.True(capture.IsSuccessStatusCode);
+        var captureBody = JsonDocument.Parse(await capture.Content.ReadAsStreamAsync()).RootElement;
+        Assert.Equal(20, captureBody.GetProperty("seasonNumber").GetInt32());
+        Assert.Equal(3, captureBody.GetProperty("entriesStored").GetInt32());
+        Assert.Equal(1, captureBody.GetProperty("trackedWinnerAlerts").GetInt32());
+
+        var board = await GetJsonAsync("/api/v1/ranked/hall-of-fame");
+        Assert.Equal(20, board.GetProperty("seasonNumber").GetInt32());
+        var seasons = board.GetProperty("availableSeasons").EnumerateArray().Select(s => s.GetInt32()).ToList();
+        Assert.Equal([20], seasons);
+
+        var rows = board.GetProperty("rows").EnumerateArray().ToList();
+        Assert.Equal(3, rows.Count);
+        var lunaRow = rows.Single(r => r.GetProperty("playerName").GetString() == "luna");
+        Assert.Equal(2, lunaRow.GetProperty("position").GetInt32());
+        Assert.True(lunaRow.GetProperty("tracked").GetBoolean());
+        Assert.NotNull(lunaRow.GetProperty("avatarUrl").GetString());
+
+        var alerts = await GetJsonAsync("/api/v1/alerts?kind=HallOfFameEntry");
+        var alert = Assert.Single(alerts.EnumerateArray());
+        Assert.Equal("luna", alert.GetProperty("entityTitle").GetString());
+        Assert.Contains("season 20", alert.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task HallOfFame_UnknownSeason_MapsUpstream404()
+    {
+        var response = await _client.PostAsync("/api/v1/ranked/hall-of-fame/capture?season=19", content: null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var body = JsonDocument.Parse(await response.Content.ReadAsStreamAsync()).RootElement;
+        Assert.Equal("upstream", body.GetProperty("type").GetString());
+    }
+
     private async Task<string> CreateViewerAsync()
     {
         var viewerUsername = $"viewer-{Guid.NewGuid():N}"[..32];
