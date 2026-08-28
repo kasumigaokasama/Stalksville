@@ -9,8 +9,9 @@ namespace Stalksville.IntegrationTests;
 /// Boots the real Stalksville API in-process against a throwaway Postgres database and the
 /// MockWolvesvilleServer. <see cref="MockWolvesvilleServer"/> runs on real localhost HTTP, so the
 /// API's outbound client exercises the full handler pipeline (host guard, logging, resilience).
+/// Unsealed so suites can tweak configuration through a derived factory.
 /// </summary>
-public sealed class StalksvilleApiFactory : WebApplicationFactory<Program>
+public class StalksvilleApiFactory : WebApplicationFactory<Program>
 {
     public MockWolvesvilleServer Mock { get; } = new();
 

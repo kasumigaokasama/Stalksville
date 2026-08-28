@@ -19,6 +19,7 @@ public sealed class PlayerService(
     IClanStore clans,
     IDerivationStore derivations,
     IAlertStore alerts,
+    Microsoft.Extensions.Options.IOptions<Advanced.AlertsOptions> alertOptions,
     IAuditLog audit,
     ILogger<PlayerService> logger)
 {
@@ -153,7 +154,7 @@ public sealed class PlayerService(
                     timelineEvents.AddRange(TimelineForChanges(player.Id, fieldChanges, latest, snapshot, now));
 
                     // Alerts are derived from the same change records, transactionally with them.
-                    var candidates = AlertEngine.Evaluate(player.Id, state.Username, changeEntities, now);
+                    var candidates = AlertEngine.Evaluate(player.Id, state.Username, changeEntities, now, alertOptions.Value.LevelJumpThreshold);
                     if (candidates.Count > 0)
                     {
                         await alerts.AddIfNewAsync(candidates, EntityType.Player, player.Id, state.Username, now, cancellationToken);

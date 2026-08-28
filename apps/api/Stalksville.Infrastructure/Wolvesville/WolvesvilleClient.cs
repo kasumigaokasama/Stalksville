@@ -105,6 +105,30 @@ public sealed class WolvesvilleClient(
         return result;
     }
 
+    public async Task<ObservedHighscores> GetHighscoresAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        const string cacheKey = "wolvesville:highscores";
+
+        if (!bypassCache && await cache.GetAsync<ObservedHighscores>(cacheKey, cancellationToken) is { } cached)
+        {
+            logger.LogDebug("Wolvesville cache hit for players/highscores");
+            return cached;
+        }
+
+        var dto = await GetAsync<HighscoresDto>("players/highscores", cancellationToken);
+        var result = new ObservedHighscores(
+            [.. dto.AllTime.Select(ToRank)],
+            [.. dto.Monthly.Select(ToRank)],
+            [.. dto.Weekly.Select(ToRank)],
+            [.. dto.Daily.Select(ToRank)],
+            "wolvesville:GET /players/highscores");
+
+        await cache.SetAsync(cacheKey, result, CachePolicy.HighscoresTtl, cancellationToken);
+        return result;
+    }
+
+    private static ObservedHighscoreRank ToRank(HighscoreRankDto rank) => new(rank.PlayerId, rank.Username, rank.Xp);
+
     public async Task PingAsync(CancellationToken cancellationToken = default)
     {
         // GET /roles is small and authenticated — used purely as a connectivity/key check.

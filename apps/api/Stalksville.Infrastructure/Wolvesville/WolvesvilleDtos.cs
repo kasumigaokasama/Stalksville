@@ -137,3 +137,32 @@ internal sealed class ClanDto
     [JsonPropertyName("memberIds")]
     public List<string>? MemberIds { get; set; }
 }
+
+/// <summary>Spec schema PlayerRank — one row of a highscore board.</summary>
+internal sealed class HighscoreRankDto
+{
+    [JsonPropertyName("playerId")]
+    public string PlayerId { get; set; } = string.Empty;
+
+    [JsonPropertyName("username")]
+    public string Username { get; set; } = string.Empty;
+
+    [JsonPropertyName("xp")]
+    public long Xp { get; set; }
+}
+
+/// <summary>Spec schema HighScore — GET /players/highscores.</summary>
+internal sealed class HighscoresDto
+{
+    [JsonPropertyName("allTime")]
+    public List<HighscoreRankDto> AllTime { get; set; } = [];
+
+    [JsonPropertyName("monthly")]
+    public List<HighscoreRankDto> Monthly { get; set; } = [];
+
+    [JsonPropertyName("weekly")]
+    public List<HighscoreRankDto> Weekly { get; set; } = [];
+
+    [JsonPropertyName("daily")]
+    public List<HighscoreRankDto> Daily { get; set; } = [];
+}

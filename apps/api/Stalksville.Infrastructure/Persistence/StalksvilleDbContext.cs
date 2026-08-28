@@ -35,6 +35,8 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
 
     public DbSet<Alert> Alerts => Set<Alert>();
 
+    public DbSet<HighscoreEntry> HighscoreEntries => Set<HighscoreEntry>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -208,6 +210,18 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.HasIndex(x => x.DedupeKey).IsUnique();
             e.HasIndex(x => new { x.EntityType, x.EntityId, x.CreatedAt });
             e.HasIndex(x => x.ReadAt);
+        });
+
+        modelBuilder.Entity<HighscoreEntry>(e =>
+        {
+            e.ToTable("highscore_entries");
+            e.Property(x => x.Period).HasMaxLength(16);
+            e.Property(x => x.WolvesvillePlayerId).HasMaxLength(64);
+            e.Property(x => x.Username).HasMaxLength(64);
+            e.Property(x => x.UsernameLower).HasMaxLength(64);
+            e.HasIndex(x => new { x.Period, x.CapturedAt, x.Rank });
+            e.HasIndex(x => x.UsernameLower);
+            e.HasIndex(x => x.PlayerId);
         });
     }
 }

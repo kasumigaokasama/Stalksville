@@ -5,6 +5,7 @@ public static class AlertKinds
     public const string ClanChanged = "ClanChanged";
     public const string UsernameChanged = "UsernameChanged";
     public const string LevelJump = "LevelJump";
+    public const string RankShift = "RankShift";
 }
 
 public enum AlertSeverity

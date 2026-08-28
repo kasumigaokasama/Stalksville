@@ -1,0 +1,74 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Highscores</h1>
+      <div class="stl-subtitle">
+        @if (board(); as b) {
+          @if (b.capturedAt; as at) {
+            top-100 XP boards · captured {{ formatDateTime(at) }} · observed
+          } @else {
+            top-100 XP boards · no capture yet
+          }
+        } @else {
+          top-100 XP boards
+        }
+      </div>
+    </div>
+    <div class="filters">
+      <select class="stl-input" [value]="period()" (change)="period.set($any($event.target).value)">
+        @for (p of periods; track p.value) {
+          <option [value]="p.value">{{ p.label }}</option>
+        }
+      </select>
+      @if (auth.canWrite()) {
+        <button class="stl-button" type="button" [disabled]="busy()" (click)="capture()">
+          {{ busy() ? 'Capturing…' : 'Capture now' }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (note(); as message) {
+    <div class="stl-card note">{{ message }}</div>
+  }
+
+  <section class="stl-card">
+    @if (isLoading()) {
+      <div class="stl-empty">Loading board…</div>
+    } @else if (rows().length === 0) {
+      <div class="stl-empty">
+        No capture yet — the worker captures daily, or press "Capture now" to fetch the boards immediately.
+      </div>
+    } @else {
+      <table class="stl-table">
+        <thead><tr><th>Rank</th><th>Player</th><th>XP</th><th>Wolvesville ID</th><th></th></tr></thead>
+        <tbody>
+          @for (row of rows(); track row.wolvesvillePlayerId) {
+            <tr>
+              <td class="mono">{{ row.rank }}</td>
+              <td>
+                @if (row.tracked && row.playerId; as playerId) {
+                  <a [routerLink]="['/players', playerId]">{{ row.username }}</a>
+                  <span class="stl-tag stl-tag--success">tracked</span>
+                } @else {
+                  {{ row.username }}
+                }
+              </td>
+              <td class="mono">{{ formatNumber(row.xp) }}</td>
+              <td class="mono muted">{{ row.wolvesvillePlayerId.slice(0, 13) }}…</td>
+              <td>
+                @if (auth.canWrite() && !row.tracked) {
+                  <button class="stl-button small" type="button"
+                          [disabled]="tracking() !== null"
+                          (click)="track(row.username)">
+                    {{ tracking() === row.username ? 'Importing…' : 'Track' }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</div>

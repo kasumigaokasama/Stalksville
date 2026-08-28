@@ -1,0 +1,19 @@
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  select {
+    width: 140px;
+  }
+}
+
+.note {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--stl-text-muted);
+}
+
+.stl-table td .stl-tag {
+  margin-left: 8px;
+}

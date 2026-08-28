@@ -27,8 +27,11 @@ public interface IWolvesvilleClient
     /// <summary>Clan info: GET /clans/{clanId}/info.</summary>
     Task<ObservedClan> GetClanInfoAsync(string wolvesvilleClanId, bool bypassCache = false, CancellationToken cancellationToken = default);
 
-    /// <summary>Clan members with full profiles: GET /clans/{clanId}/members.</summary>
+    /// <summary>Clan members: GET /clans/{clanId}/members (ClanMember payloads).</summary>
     Task<IReadOnlyList<PlayerObservation>> GetClanMembersAsync(string wolvesvilleClanId, bool bypassCache = false, CancellationToken cancellationToken = default);
+
+    /// <summary>Top-100 XP boards: GET /players/highscores (allTime/monthly/weekly/daily).</summary>
+    Task<ObservedHighscores> GetHighscoresAsync(bool bypassCache = false, CancellationToken cancellationToken = default);
 
     /// <summary>Cheap authenticated call (GET /roles) used for connectivity checks. Throws on failure.</summary>
     Task PingAsync(CancellationToken cancellationToken = default);

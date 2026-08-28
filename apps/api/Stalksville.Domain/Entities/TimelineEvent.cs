@@ -12,6 +12,7 @@ public static class TimelineEventTypes
     public const string ClanImported = "ClanImported";
     public const string MembershipStarted = "MembershipStarted";
     public const string MembershipEnded = "MembershipEnded";
+    public const string HighscoreRankChanged = "HighscoreRankChanged";
 }
 
 /// <summary>

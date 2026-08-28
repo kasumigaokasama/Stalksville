@@ -23,6 +23,7 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
     private readonly Dictionary<string, PlayerFixture> _playersByUsername;
     private readonly Dictionary<string, PlayerFixture> _playersById;
     private readonly Dictionary<string, ClanFixture> _clans;
+    private readonly List<HighscoreFixture> _allTimeHighscores;
 
     public string BaseUrl { get; }
 
@@ -44,6 +45,16 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
             ["2001"] = new("2001", "Iron Fangs", [flex.Id, talon.Id]),
             ["2002"] = new("2002", "Sky Howl", [luna.Id])
         };
+
+        // Spec shape: GET /players/highscores → { allTime, monthly, weekly, daily } of PlayerRank.
+        _allTimeHighscores =
+        [
+            new("9001", "TopWolf", 500_000),
+            new(flex.Id, flex.Username, 400_000),
+            new("9002", "QuietStorm", 320_000),
+            new(talon.Id, talon.Username, 300_000),
+            new("9003", "EchoLeaf", 210_000)
+        ];
 
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -67,6 +78,25 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
             Handle(request, () => _playersByUsername.TryGetValue(username, out var player)
                 ? Results.Json(PlayerPayload(player))
                 : Results.NotFound(Error($"No player with username {username}"))));
+
+        _app.MapGet("/players/highscores", (HttpRequest request) =>
+            Handle(request, () => Results.Json(new
+            {
+                allTime = SnapshotHighscores(),
+                monthly = new object[]
+                {
+                    new { playerId = "9004", username = "MonthWolf", xp = 40_000L },
+                    new { playerId = "9005", username = "LunaRise", xp = 36_000L }
+                },
+                weekly = new object[]
+                {
+                    new { playerId = "9006", username = "WeekPaw", xp = 8_000L }
+                },
+                daily = new object[]
+                {
+                    new { playerId = "9007", username = "DayHowl", xp = 900L }
+                }
+            })));
 
         _app.MapGet("/players/{playerId}", (string playerId, HttpRequest request) =>
             Handle(request, () => _playersById.TryGetValue(playerId, out var player)
@@ -123,6 +153,24 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
                 {
                     player.Wins = mutation.Wins.Value;
                 }
+            }
+
+            return Results.Ok();
+        });
+
+        _app.MapPut("/_test/highscores", (HighscoreMutation mutation) =>
+        {
+            lock (_sync)
+            {
+                var entry = _allTimeHighscores.FirstOrDefault(h => h.Username.Equals(mutation.Username, StringComparison.OrdinalIgnoreCase));
+                if (entry is null)
+                {
+                    return Results.NotFound();
+                }
+
+                var target = Math.Clamp(mutation.NewRank, 1, _allTimeHighscores.Count);
+                _allTimeHighscores.Remove(entry);
+                _allTimeHighscores.Insert(target - 1, entry);
             }
 
             return Results.Ok();
@@ -246,6 +294,14 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
         await _app.DisposeAsync();
     }
 
+    private List<object> SnapshotHighscores()
+    {
+        lock (_sync)
+        {
+            return _allTimeHighscores.Select(h => (object)new { playerId = h.PlayerId, username = h.Username, xp = h.Xp }).ToList();
+        }
+    }
+
     private sealed record PlayerFixture(string Id, string Username, string? ClanId, int Level, string[] BadgeIds)
     {
         public string? ClanId { get; set; } = ClanId;
@@ -262,4 +318,8 @@ public sealed class MockWolvesvilleServer : IAsyncDisposable
     private sealed record PlayerMutation(string? ClanId, int? Level, string? AddBadge, int? Wins);
 
     private sealed record FailureScript(int Status, int Count);
+
+    private sealed record HighscoreMutation(string Username, int NewRank);
+
+    private sealed record HighscoreFixture(string PlayerId, string Username, long Xp);
 }

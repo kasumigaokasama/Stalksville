@@ -12,6 +12,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddStalksvilleApplication(this IServiceCollection services)
     {
+        services.AddOptions<Advanced.AlertsOptions>().BindConfiguration("Alerts");
         services.AddScoped<PlayerService>();
         services.AddScoped<ClanService>();
         services.AddScoped<AuthService>();
@@ -20,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<GraphService>();
         services.AddScoped<AnalyticsService>();
         services.AddScoped<PlayerIntelligenceService>();
+        services.AddScoped<HighscoreService>();
         services.AddScoped<Investigations.InvestigationExporter>();
         return services;
     }

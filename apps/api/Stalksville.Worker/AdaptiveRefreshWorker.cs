@@ -74,6 +74,8 @@ public sealed class AdaptiveRefreshWorker(
         var players = scope.ServiceProvider.GetRequiredService<IPlayerStore>();
         var playerService = scope.ServiceProvider.GetRequiredService<PlayerService>();
 
+        await CaptureHighscoresIfDueAsync(scope.ServiceProvider, cancellationToken);
+
         var maxPerRun = Math.Max(1, configuration.GetValue("Worker:MaxPerRun", 5));
         var minInterval = Math.Max(5, configuration.GetValue("Worker:MinPlayerIntervalMinutes", 60));
 
@@ -110,6 +112,30 @@ public sealed class AdaptiveRefreshWorker(
             {
                 logger.LogWarning(ex, "Failed to refresh {Username}; continuing", candidate.Username);
             }
+        }
+    }
+
+    /// <summary>Highscore boards are captured at most once per capture interval (default 24h).</summary>
+    private async Task CaptureHighscoresIfDueAsync(IServiceProvider scoped, CancellationToken cancellationToken)
+    {
+        var highscores = scoped.GetRequiredService<Application.Advanced.HighscoreService>();
+        var store = scoped.GetRequiredService<IHighscoreStore>();
+        var intervalHours = Math.Max(1, services.GetRequiredService<IConfiguration>().GetValue("Worker:HighscoreCaptureIntervalHours", 24));
+
+        var lastCapture = await store.GetLastCaptureAtAsync(cancellationToken);
+        if (lastCapture is { } last && DateTimeOffset.UtcNow - last < TimeSpan.FromHours(intervalHours))
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await highscores.CaptureAsync(cancellationToken: cancellationToken);
+            logger.LogInformation("Highscore capture: {Entries} entries, {Alerts} rank-shift alert(s)", result.EntriesStored, result.RankShiftAlerts);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Highscore capture failed; retrying next cycle");
         }
     }
 }

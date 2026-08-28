@@ -11,6 +11,9 @@ public static class CachePolicy
 
     public static readonly TimeSpan RolesTtl = TimeSpan.FromHours(24);
 
+    /// <summary>Boards reset daily at most; a short TTL keeps manual captures fresh.</summary>
+    public static readonly TimeSpan HighscoresTtl = TimeSpan.FromMinutes(15);
+
     public const string PlayerByKeyPrefix = "wv:player:";
     public const string ClanInfoKeyPrefix = "wv:clan:";
     public const string ClanSearchKeyPrefix = "wv:clansearch:";

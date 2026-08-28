@@ -256,6 +256,27 @@ export interface GraphAnalyticsDto {
   note: string;
 }
 
+export interface HighscoreRowDto {
+  rank: number;
+  username: string;
+  wolvesvillePlayerId: string;
+  xp: number;
+  playerId: string | null;
+  tracked: boolean;
+}
+
+export interface HighscoreBoardDto {
+  period: string;
+  capturedAt: string | null;
+  rows: HighscoreRowDto[];
+}
+
+export interface HighscoreCaptureResultDto {
+  capturedAt: string;
+  entriesStored: number;
+  rankShiftAlerts: number;
+}
+
 export interface InvestigationSummaryDto {
   id: string;
   caseNumber: number;

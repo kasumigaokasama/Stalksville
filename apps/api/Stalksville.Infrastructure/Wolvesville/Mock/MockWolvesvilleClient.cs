@@ -65,6 +65,31 @@ public sealed class MockWolvesvilleClient(ILogger<MockWolvesvilleClient> logger)
 
     public Task PingAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
+    public Task<ObservedHighscores> GetHighscoresAsync(bool bypassCache = false, CancellationToken cancellationToken = default)
+    {
+        // Demo boards include tracked players so rank matching and discovery can be exercised.
+        ObservedHighscores result = new(
+        [
+            new ObservedHighscoreRank("1001", "shadowfox", 118_000),
+            new ObservedHighscoreRank("1004", "talon", 92_000),
+            new ObservedHighscoreRank("99001", "MoonChaser", 88_000),
+        ],
+        [
+            new ObservedHighscoreRank("99002", "StarHowl", 12_400),
+            new ObservedHighscoreRank("1001", "shadowfox", 9_800),
+        ],
+        [
+            new ObservedHighscoreRank("1002", "nightowl", 3_100),
+            new ObservedHighscoreRank("99003", "SilverFang", 2_900),
+        ],
+        [
+            new ObservedHighscoreRank("99004", "DawnPaw", 640),
+        ],
+            "mock:GET /players/highscores");
+
+        return Task.FromResult(result);
+    }
+
     // --- dataset ---
 
     private sealed record MockClan(string Id, string Name, string? Description, int Level, long Xps, string[] MemberUsernames)

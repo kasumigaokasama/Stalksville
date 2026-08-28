@@ -21,6 +21,7 @@ export class Shell {
   protected readonly nav = [
     { path: '/dashboard', label: 'Overview' },
     { path: '/players', label: 'Players' },
+    { path: '/highscores', label: 'Highscores' },
     { path: '/clans', label: 'Clans' },
     { path: '/investigations', label: 'Investigations' },
     { path: '/graph', label: 'Graph' },

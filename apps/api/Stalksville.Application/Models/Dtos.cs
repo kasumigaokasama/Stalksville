@@ -147,6 +147,26 @@ public sealed record GraphAnalyticsDto(
     IReadOnlyList<CommunityDto> Communities,
     string Note);
 
+// ---- Highscores (observed boards + derived rank shifts) ----
+
+public sealed record HighscoreRowDto(
+    int Rank,
+    string Username,
+    string WolvesvillePlayerId,
+    long Xp,
+    Guid? PlayerId,
+    bool Tracked);
+
+public sealed record HighscoreBoardDto(
+    string Period,
+    DateTimeOffset? CapturedAt,
+    IReadOnlyList<HighscoreRowDto> Rows);
+
+public sealed record HighscoreCaptureResultDto(
+    DateTimeOffset CapturedAt,
+    int EntriesStored,
+    int RankShiftAlerts);
+
 public sealed record DerivedDto(
     int TotalChanges,
     IReadOnlyList<ChangeDto> RecentChanges,
