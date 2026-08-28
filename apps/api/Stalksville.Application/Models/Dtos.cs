@@ -117,6 +117,36 @@ public sealed record AlertDto(
 
 public sealed record UnreadCountDto(int Unread);
 
+// ---- Progression (observed) ----
+
+public sealed record ProgressionPointDto(
+    DateTimeOffset CapturedAt,
+    int ObservationCount,
+    int? Level,
+    int Wins,
+    int GamesPlayed,
+    int? Achievements);
+
+public sealed record ProgressionDto(IReadOnlyList<ProgressionPointDto> Points);
+
+// ---- Graph analytics (derived) ----
+
+public sealed record ConnectorDto(
+    string NodeId,
+    string Type,
+    string Label,
+    int Degree,
+    double Betweenness);
+
+public sealed record CommunityDto(int Index, int Size, IReadOnlyList<string> MemberIds);
+
+public sealed record GraphAnalyticsDto(
+    int NodeCount,
+    int EdgeCount,
+    IReadOnlyList<ConnectorDto> TopConnectors,
+    IReadOnlyList<CommunityDto> Communities,
+    string Note);
+
 public sealed record DerivedDto(
     int TotalChanges,
     IReadOnlyList<ChangeDto> RecentChanges,

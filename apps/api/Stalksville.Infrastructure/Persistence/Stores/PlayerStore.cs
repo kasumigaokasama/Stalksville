@@ -98,6 +98,13 @@ public sealed class PlayerStore(StalksvilleDbContext db) : IPlayerStore
             .Take(limit)
             .ToListAsync(cancellationToken);
 
+    /// <summary>Full snapshot history, oldest first — progression charts read the whole series.</summary>
+    public async Task<IReadOnlyList<PlayerSnapshot>> GetSnapshotHistoryAsync(Guid playerId, CancellationToken cancellationToken = default)
+        => await db.PlayerSnapshots
+            .Where(s => s.PlayerId == playerId)
+            .OrderBy(s => s.CapturedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task AddChangesAsync(IReadOnlyList<PlayerChange> changes, CancellationToken cancellationToken = default)
     {
         db.PlayerChanges.AddRange(changes);

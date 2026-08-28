@@ -14,6 +14,7 @@ import { RouterLink } from '@angular/router';
 import cytoscape from 'cytoscape';
 
 import {
+  GraphAnalyticsDto,
   GraphDto,
     GraphEdgeDto,
   GraphNodeDto,
@@ -43,7 +44,16 @@ export class Graph implements OnDestroy {
     this.investigationId() ? `/api/v1/graph?investigationId=${this.investigationId()}` : '/api/v1/graph',
   );
 
+  private readonly analyticsResource = httpResource<GraphAnalyticsDto>(() =>
+    this.investigationId()
+      ? `/api/v1/graph/analytics?investigationId=${this.investigationId()}`
+      : '/api/v1/graph/analytics',
+  );
+
   protected readonly graph = computed(() => (this.graphResource.hasValue() ? this.graphResource.value() : null));
+  protected readonly analytics = computed(() =>
+    this.analyticsResource.hasValue() ? this.analyticsResource.value() : null,
+  );
   protected readonly isLoading = computed(() => this.graphResource.isLoading());
 
   protected readonly selectedNode = signal<GraphNodeDto | null>(null);
@@ -74,7 +84,7 @@ export class Graph implements OnDestroy {
     effect(() => {
       const data = this.graph();
       if (data) {
-        this.render(data);
+        this.render(data, this.communityByNode());
       }
     });
   }
@@ -84,7 +94,19 @@ export class Graph implements OnDestroy {
     this.cy = null;
   }
 
-  private render(data: GraphDto): void {
+  private readonly communityPalette = ['#f472b6', '#38bdf8', '#facc15', '#a3e635', '#fb923c', '#c084fc', '#2dd4bf', '#f87171'];
+
+  private readonly communityByNode = computed(() => {
+    const map = new Map<string, number>();
+    for (const community of this.analytics()?.communities ?? []) {
+      for (const memberId of community.memberIds) {
+        map.set(memberId, community.index);
+      }
+    }
+    return map;
+  });
+
+  private render(data: GraphDto, communityByNode: ReadonlyMap<string, number>): void {
     this.cy?.destroy();
 
     const nodeById = new Map(data.nodes.map((n) => [n.id, n]));
@@ -149,6 +171,14 @@ export class Graph implements OnDestroy {
       ],
       layout: { name: 'cose', animate: true, padding: 30 } as never,
     });
+
+    // Community rings: one border color per detected community (single communities stay neutral).
+    if (communityByNode.size > 0 && (this.analytics()?.communities.length ?? 0) > 1) {
+      for (const [nodeId, index] of communityByNode) {
+        this.cy.getElementById(nodeId).style('border-color', this.communityPalette[index % this.communityPalette.length]);
+        this.cy.getElementById(nodeId).style('border-width', 3);
+      }
+    }
 
     this.cy.on('tap', 'node', (event) => {
       const node = nodeById.get(event.target.id());

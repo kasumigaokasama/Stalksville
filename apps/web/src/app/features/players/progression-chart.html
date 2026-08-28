@@ -1,0 +1,33 @@
+<div class="chart-wrap">
+  @if (!hasData()) {
+    <div class="stl-empty">No progression recorded yet — snapshots appear as the player is observed over time.</div>
+  } @else {
+    <div class="legend">
+      @for (item of legend; track item.key) {
+        <span class="legend-item">
+          <span class="swatch" [style.background]="item.color"></span>
+          {{ item.label }}
+        </span>
+      }
+    </div>
+    <svg [attr.viewBox]="'0 0 ' + width + ' ' + height" class="chart" role="img" aria-label="Observed progression over time">
+      <line [attr.x1]="pad" [attr.y1]="height - pad" [attr.x2]="width - pad" [attr.y2]="height - pad" class="axis" />
+      @for (path of paths(); track path.series.key) {
+        @if (path.coords.some((c) => c.value > 0)) {
+          <polyline [attr.points]="path.line" [style.stroke]="path.series.color" class="line" />
+          @for (coord of path.coords; track $index) {
+            @if (coord.value > 0) {
+              <circle [attr.cx]="coord.x" [attr.cy]="coord.y" r="3" [style.fill]="path.series.color">
+                <title>{{ path.series.label }}: {{ coord.value }} @ {{ coord.capturedAt | date: 'medium' }}</title>
+              </circle>
+            }
+          }
+        }
+      }
+    </svg>
+    <div class="axis-labels">
+      <span class="mono">{{ points()[0]?.capturedAt | date: 'MMM d, HH:mm' }}</span>
+      <span class="mono">{{ points()[points().length - 1]?.capturedAt | date: 'MMM d, HH:mm' }}</span>
+    </div>
+  }
+</div>

@@ -221,6 +221,41 @@ export interface UnreadCountDto {
   unread: number;
 }
 
+export interface ProgressionPointDto {
+  capturedAt: string;
+  observationCount: number;
+  level: number | null;
+  wins: number;
+  gamesPlayed: number;
+  achievements: number | null;
+}
+
+export interface ProgressionDto {
+  points: ProgressionPointDto[];
+}
+
+export interface ConnectorDto {
+  nodeId: string;
+  type: string;
+  label: string;
+  degree: number;
+  betweenness: number;
+}
+
+export interface CommunityDto {
+  index: number;
+  size: number;
+  memberIds: string[];
+}
+
+export interface GraphAnalyticsDto {
+  nodeCount: number;
+  edgeCount: number;
+  topConnectors: ConnectorDto[];
+  communities: CommunityDto[];
+  note: string;
+}
+
 export interface InvestigationSummaryDto {
   id: string;
   caseNumber: number;

@@ -1,0 +1,49 @@
+.chart-wrap {
+  width: 100%;
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--stl-text-muted);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+
+  .axis {
+    stroke: var(--stl-border);
+    stroke-width: 1;
+  }
+
+  .line {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+}
+
+.axis-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--stl-text-faint);
+}

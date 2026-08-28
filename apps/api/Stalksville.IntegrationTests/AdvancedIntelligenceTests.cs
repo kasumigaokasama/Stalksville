@@ -205,4 +205,55 @@ public sealed class AdvancedIntelligenceTests : IAsyncLifetime
         // Today's import activity must show up as points.
         Assert.Contains(series, s => s.GetProperty("points").EnumerateArray().Any(p => p.GetProperty("value").GetInt32() > 0));
     }
+
+    [Fact]
+    public async Task Progression_ProjectsObservedSeriesFromSnapshots()
+    {
+        var response = await _client.GetAsync($"/api/v1/players/{_flexId}/progression");
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, body);
+        var progression = JsonDocument.Parse(body).RootElement;
+
+        var points = progression.GetProperty("points").EnumerateArray().ToList();
+        var first = Assert.Single(points);
+        // The import snapshot comes from the ClanMember payload: level yes, game stats no.
+        Assert.Equal(42, first.GetProperty("level").GetInt32());
+        Assert.Equal(0, first.GetProperty("wins").GetInt32());
+
+        // A full-profile refresh appends a point and fills in what the member payload lacked.
+        var mutate = await _mock.PutAsJsonAsync("/_test/players/flex", new { level = 45 });
+        mutate.EnsureSuccessStatusCode();
+        var refresh = await _client.PostAsync($"/api/v1/players/{_flexId}/refresh", content: null);
+        refresh.EnsureSuccessStatusCode();
+
+        var updated = JsonDocument.Parse(await (await _client.GetAsync($"/api/v1/players/{_flexId}/progression")).Content.ReadAsStringAsync()).RootElement;
+        var updatedPoints = updated.GetProperty("points").EnumerateArray().ToList();
+        Assert.Equal(2, updatedPoints.Count);
+        Assert.Equal(45, updatedPoints[^1].GetProperty("level").GetInt32());
+        Assert.Equal(400, updatedPoints[^1].GetProperty("wins").GetInt32());
+    }
+
+    [Fact]
+    public async Task GraphAnalytics_ReportsConnectorsAndCommunities()
+    {
+        var response = await _client.GetAsync("/api/v1/graph/analytics");
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, body);
+        var analytics = JsonDocument.Parse(body).RootElement;
+
+        Assert.True(analytics.GetProperty("nodeCount").GetInt32() >= 3); // flex + talon + clan
+        Assert.True(analytics.GetProperty("edgeCount").GetInt32() >= 2);
+
+        // The shared clan is the top connector: both players' paths pass through it.
+        var connectors = analytics.GetProperty("topConnectors").EnumerateArray().ToList();
+        Assert.NotEmpty(connectors);
+        Assert.Equal("clan", connectors[0].GetProperty("type").GetString());
+        Assert.True(connectors[0].GetProperty("betweenness").GetDouble() > 0);
+
+        // flex + talon + the clan form one community.
+        var communities = analytics.GetProperty("communities").EnumerateArray().ToList();
+        Assert.Contains(communities, c => c.GetProperty("size").GetInt32() >= 3);
+
+        Assert.Contains("Deterministic", analytics.GetProperty("note").GetString());
+    }
 }

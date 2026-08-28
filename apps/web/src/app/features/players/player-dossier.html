@@ -144,6 +144,16 @@
         </section>
       }
 
+      @case ('progression') {
+        <section class="stl-card">
+          <h2>Progression <span class="stl-tag stl-tag--observed">observed</span></h2>
+          <p class="hint">
+            Level, wins and games played across every stored snapshot — each dot is one real observation.
+          </p>
+          <stl-progression-chart [points]="progression()" />
+        </section>
+      }
+
       @case ('snapshots') {
         <section class="stl-card">
           <h2>Snapshots <span class="stl-tag stl-tag--observed">observed</span></h2>

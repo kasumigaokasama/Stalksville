@@ -20,6 +20,11 @@ test.describe('Advanced intelligence (mock Wolvesville)', () => {
     await expect(page.locator('.canvas canvas').first()).toBeVisible();
     await expect(page.getByText('MEMBER_OF (current)').first()).toBeVisible(); // legend
 
+    // Analytics panel: derived connectors and community count.
+    await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('columnheader', { name: 'Betweenness' })).toBeVisible();
+    await expect(page.locator('.side table a').first()).toBeVisible();
+
     // Path finding between two clanmates.
     await page.locator('.path-finder select').nth(0).selectOption({ label: 'shadowfox' });
     await page.locator('.path-finder select').nth(1).selectOption({ label: 'nightowl' });
@@ -45,6 +50,24 @@ test.describe('Advanced intelligence (mock Wolvesville)', () => {
 
     // shadowfox has scripted clan switches → volatility insight with evidence.
     await expect(page.getByText('Membership volatility').first()).toBeVisible();
+  });
+
+  test('dossier Progression tab charts the observed snapshot series', async ({ page }) => {
+    await login(page);
+
+    await page.keyboard.press('Control+k');
+    await page.getByPlaceholder(/Search…/).fill('player:shadowfox');
+    await page.getByRole('button', { name: /open dossier/ }).click();
+    await expect(page.getByRole('heading', { name: 'shadowfox', exact: true })).toBeVisible();
+
+    // A refresh with the mock drift appends an observation, then the chart renders the series.
+    await page.getByRole('button', { name: 'Refresh from Wolvesville' }).click();
+    await expect(page.getByText(/change\(s\) detected in this observation/)).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('tab', { name: 'Progression' }).click();
+    await expect(page.getByText('Level, wins and games played across every stored snapshot')).toBeVisible();
+    await expect(page.locator('stl-progression-chart svg polyline').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Wins', { exact: true })).toBeVisible(); // legend
   });
 
   test('analytics page renders totals and series charts', async ({ page }) => {

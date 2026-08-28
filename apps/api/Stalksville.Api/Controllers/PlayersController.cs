@@ -67,6 +67,14 @@ public sealed class PlayersController(PlayerService players, PlayerIntelligenceS
         return Ok(await intelligence.GetInsightsAsync(id, cancellationToken));
     }
 
+    /// <summary>Observed progression series (level, wins, games) from snapshot history.</summary>
+    [HttpGet("{id:guid}/progression")]
+    [ProducesResponseType<ProgressionDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetProgression(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await players.GetProgressionAsync(id, cancellationToken));
+    }
+
     /// <summary>Re-fetches the player from Wolvesville (bypasses cache) and runs the full pipeline.</summary>
     [HttpPost("{id:guid}/refresh")]
     [Authorize(Policy = Policies.Analyst)]

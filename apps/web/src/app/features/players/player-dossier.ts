@@ -10,16 +10,18 @@ import {
   InsightDto,
   PlayerDossierDto,
   PlayerLookupResultDto,
+  ProgressionDto,
   SnapshotDto,
 } from '../../core/api/api.model';
 import { fieldLabel, formatDateTime, formatNumber, formatRelative } from '../../shared/util/format';
+import { ProgressionChart } from './progression-chart';
 
-type Tab = 'overview' | 'identity' | 'clans' | 'snapshots' | 'changes' | 'intelligence';
+type Tab = 'overview' | 'identity' | 'clans' | 'progression' | 'snapshots' | 'changes' | 'intelligence';
 
 /** The flagship dossier: observed state on top, derived intelligence (with evidence) below. */
 @Component({
   selector: 'stl-player-dossier',
-  imports: [RouterLink],
+  imports: [RouterLink, ProgressionChart],
   styleUrl: './player-dossier.scss',
   templateUrl: './player-dossier.html',
 })
@@ -31,12 +33,16 @@ export class PlayerDossier {
 
   private readonly dossierResource = httpResource<PlayerDossierDto>(() => `/api/v1/players/${this.id()}`);
   private readonly snapshotsResource = httpResource<SnapshotDto[]>(() => `/api/v1/players/${this.id()}/snapshots`);
+  private readonly progressionResource = httpResource<ProgressionDto>(() => `/api/v1/players/${this.id()}/progression`);
   private readonly exposureResource = httpResource<ExposureResultDto>(() => `/api/v1/players/${this.id()}/exposure`);
   private readonly insightsResource = httpResource<InsightDto[]>(() => `/api/v1/players/${this.id()}/insights`);
 
   protected readonly dossier = computed(() => (this.dossierResource.hasValue() ? this.dossierResource.value() : null));
   protected readonly snapshots = computed(() =>
     this.snapshotsResource.hasValue() ? this.snapshotsResource.value() ?? [] : [],
+  );
+  protected readonly progression = computed(() =>
+    this.progressionResource.hasValue() ? this.progressionResource.value()?.points ?? [] : [],
   );
   protected readonly exposure = computed(() => (this.exposureResource.hasValue() ? this.exposureResource.value() : null));
   protected readonly insights = computed(() =>
@@ -53,6 +59,7 @@ export class PlayerDossier {
     { key: 'overview', label: 'Overview' },
     { key: 'identity', label: 'Identity' },
     { key: 'clans', label: 'Clans' },
+    { key: 'progression', label: 'Progression' },
     { key: 'snapshots', label: 'Snapshots' },
     { key: 'changes', label: 'Changes' },
     { key: 'intelligence', label: 'Intelligence' },
@@ -77,6 +84,7 @@ export class PlayerDossier {
           );
           this.dossierResource.reload();
           this.snapshotsResource.reload();
+          this.progressionResource.reload();
         },
         error: () => {
           this.refreshing.set(false);

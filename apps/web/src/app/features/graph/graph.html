@@ -79,6 +79,39 @@
         </section>
       }
 
+      @if (analytics(); as a) {
+        <section class="stl-card detail">
+          <h2>Analytics <span class="stl-tag stl-tag--derived">derived</span></h2>
+          <dl class="stl-kv">
+            <dt>Communities</dt><dd class="mono">{{ a.communities.length }}</dd>
+            <dt>Note</dt><dd class="muted">descriptive, not predictive</dd>
+          </dl>
+          <h3>Top connectors</h3>
+          @if (a.topConnectors.length === 0) {
+            <div class="stl-empty">No relationships yet.</div>
+          } @else {
+            <table class="stl-table">
+              <thead><tr><th>Node</th><th>Degree</th><th>Betweenness</th></tr></thead>
+              <tbody>
+                @for (connector of a.topConnectors; track connector.nodeId) {
+                  <tr>
+                    <td>
+                      <a [routerLink]="entityLink({ type: connector.type, id: connector.nodeId })">{{ connector.label }}</a>
+                      <span class="stl-tag stl-tag--observed">{{ connector.type }}</span>
+                    </td>
+                    <td class="mono">{{ connector.degree }}</td>
+                    <td class="mono">{{ connector.betweenness }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+          @if (a.communities.length > 1) {
+            <p class="hint">Node borders are colored by community (label propagation over shared memberships).</p>
+          }
+        </section>
+      }
+
       @if (paths(); as found) {
         <section class="stl-card detail">
           <h2>Connection paths</h2>

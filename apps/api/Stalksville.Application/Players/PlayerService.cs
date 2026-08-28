@@ -266,6 +266,34 @@ public sealed class PlayerService(
         return snapshots.Select(s => new SnapshotDto(s.Id, s.CapturedAt, s.LastObservedAt, s.ObservationCount, s.PayloadHash, s.Source)).ToList();
     }
 
+    /// <summary>Observed progression series (level, wins, games) projected from snapshot history.</summary>
+    public async Task<ProgressionDto> GetProgressionAsync(Guid playerId, CancellationToken cancellationToken = default)
+    {
+        var player = await players.FindByIdAsync(playerId, cancellationToken)
+            ?? throw new EntityNotFoundException("player", playerId);
+
+        var history = await players.GetSnapshotHistoryAsync(player.Id, cancellationToken);
+        var points = new List<ProgressionPointDto>();
+
+        foreach (var snapshot in history)
+        {
+            if (SnapshotEngine.Parse(snapshot.Payload) is not { } state)
+            {
+                continue;
+            }
+
+            points.Add(new ProgressionPointDto(
+                snapshot.CapturedAt,
+                snapshot.ObservationCount,
+                state.Level,
+                state.Wins,
+                state.GamesPlayed,
+                state.Achievements));
+        }
+
+        return new ProgressionDto(points);
+    }
+
     /// <summary>Change history for a player, including the evidence rows backing each change.</summary>
     public async Task<(int Total, IReadOnlyList<ChangeDto> Changes)> GetChangesAsync(Guid playerId, CancellationToken cancellationToken = default)
     {

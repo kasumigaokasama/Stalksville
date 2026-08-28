@@ -1,5 +1,6 @@
 using Stalksville.Application.Abstractions;
 using Stalksville.Application.Advanced;
+using Stalksville.Application.Models;
 using Stalksville.Domain.Entities;
 using Stalksville.Intelligence.Engine;
 
@@ -81,6 +82,32 @@ public sealed class GraphService(
             .ToList();
 
         return new GraphDto(nodes, edges);
+    }
+
+    /// <summary>Deterministic analytics over the relationship graph: connectors and communities.</summary>
+    public async Task<GraphAnalyticsDto> BuildAnalyticsAsync(Guid? investigationId, CancellationToken cancellationToken = default)
+    {
+        var graph = await BuildAsync(investigationId, cancellationToken);
+        var labelById = graph.Nodes.ToDictionary(n => n.Id, n => n);
+
+        var result = GraphMetrics.Analyze(
+            graph.Nodes.Select(n => n.Id).ToList(),
+            graph.Edges.Select(e => (e.Source, e.Target)).ToList());
+
+        var connectors = result.TopConnectors
+            .Where(metric => labelById.ContainsKey(metric.NodeId))
+            .Select(metric =>
+            {
+                var node = labelById[metric.NodeId];
+                return new ConnectorDto(node.Id, node.Type, node.Label, metric.Degree, metric.Betweenness);
+            })
+            .ToList();
+
+        var communities = result.Communities
+            .Select(community => new CommunityDto(community.Index, community.Members.Count, community.Members))
+            .ToList();
+
+        return new GraphAnalyticsDto(result.NodeCount, result.EdgeCount, connectors, communities, GraphAnalyticsResult.ConfidenceNote);
     }
 
     /// <summary>Shortest connection paths between two players through shared clans (plan §4).</summary>
