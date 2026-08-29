@@ -4,12 +4,13 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../auth/auth';
 import { UnreadAlerts } from '../alerts/unread-alerts';
+import { BrandMark } from './brand-mark';
 import { Theme } from './theme';
 import { CommandPalette, type PaletteAction } from './command-palette';
 
 @Component({
   selector: 'stl-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, BrandMark],
   styleUrl: './shell.scss',
   templateUrl: './shell.html',
   host: {

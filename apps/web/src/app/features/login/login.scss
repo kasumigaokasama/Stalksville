@@ -24,13 +24,9 @@
     align-items: center;
     gap: 10px;
 
-    .brand-mark {
-      background: var(--stl-accent);
-      color: #0b0e14;
-      font-weight: 700;
-      font-size: 11px;
-      border-radius: 6px;
-      padding: 5px 7px;
+    stl-brand-mark {
+      width: 36px;
+      height: 36px;
     }
 
     h1 {

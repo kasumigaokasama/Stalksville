@@ -92,14 +92,9 @@
     gap: 10px;
     padding: 4px 8px 16px;
 
-    .brand-mark {
-      background: var(--stl-accent);
-      color: #0b0e14;
-      font-weight: 700;
-      font-size: 11px;
-      border-radius: 6px;
-      padding: 4px 6px;
-      letter-spacing: 0.05em;
+    stl-brand-mark {
+      width: 26px;
+      height: 26px;
     }
 
     .brand-name {

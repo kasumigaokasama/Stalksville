@@ -3,10 +3,11 @@ import { Router } from '@angular/router';
 import { FormField, form, required, submit } from '@angular/forms/signals';
 
 import { AuthService } from '../../core/auth/auth';
+import { BrandMark } from '../../core/layout/brand-mark';
 
 @Component({
   selector: 'stl-login',
-  imports: [FormField],
+  imports: [FormField, BrandMark],
   styleUrl: './login.scss',
   templateUrl: './login.html',
 })

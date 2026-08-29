@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Stalksville wolf-head mark. Keep in sync with scripts/brand-assets.mjs and BrandMark. -->
+  <rect width="64" height="64" rx="14" fill="#7c9aff"/>
+  <path d="M16 11 L26 20 L48 11 L51 30 L41 45 L32 57 L23 45 L13 30 Z" fill="#0b0e14"/>
+  <circle cx="25" cy="30" r="3.2" fill="#7dd3fc"/>
+  <circle cx="39" cy="30" r="3.2" fill="#7dd3fc"/>
+</svg>
