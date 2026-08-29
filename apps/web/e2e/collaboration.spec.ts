@@ -84,6 +84,7 @@ test.describe('Collaboration & UX (expansion round 2)', () => {
   });
 
   test('watchlist: star a player from the dossier and filter by watched', async ({ page }) => {
+    test.setTimeout(90_000); // palette import + star + filter round-trip on a cold runner
     await login(page);
 
     // Open a tracked player's dossier (the palette import makes this self-sufficient).

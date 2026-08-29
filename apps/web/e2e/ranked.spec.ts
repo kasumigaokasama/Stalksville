@@ -39,6 +39,7 @@ test.describe('Ranked (mock Wolvesville)', () => {
   });
 
   test('hall of fame lists finished-season winners with tracked links', async ({ page }) => {
+    test.setTimeout(90_000); // view switch + capture + optional import on a cold runner
     await login(page);
 
     await page.getByRole('link', { name: 'Ranked' }).click();

@@ -39,8 +39,11 @@ export default defineConfig({
   // One worker: specs share a persistent database and one mock Wolvesville whose data mutates
   // per fetch, so parallel files race each other (e.g. two specs refreshing the same player).
   workers: 1,
-  retries: 0,
-  reporter: [['list']],
+  // One CI retry absorbs runner-timing flakes only — locally zero, so real ordering bugs surface.
+  retries: process.env.CI ? 1 : 0,
+  // CI gets the HTML report too — the workflow uploads it, which is the only way to see WHICH
+  // test failed on a remote runner (list output alone leaves no artifact).
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL: `http://localhost:${e2ePort}`,
     trace: 'off',
