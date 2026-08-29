@@ -2,6 +2,8 @@
 
 **Wolvesville Intelligence Workbench** — turns the [Wolvesville public API](https://api-docs.wolvesville.com/) into a persistent, searchable, explainable intelligence workspace.
 
+New here? The **[user guide](docs/user-guide.md)** explains how to run the stack and use every feature.
+
 Stalksville distinguishes three kinds of information everywhere — in the database, in the API contracts, and in the UI:
 
 - **Observed** — data directly returned by Wolvesville.
