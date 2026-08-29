@@ -98,7 +98,8 @@ public sealed class SearchAndCollaborationTests : IAsyncLifetime
         Assert.Equal(adminId, body.GetProperty("investigation").GetProperty("assignedToUserId").GetGuid());
         // Tags normalize: trimmed, lowercased, deduped, empties dropped.
         Assert.Equal(["churn", "silver-moon"],
-            body.GetProperty("investigation").GetProperty("tags").EnumerateArray().Select(t => t.GetString()).ToArray());
+            body.GetProperty("investigation").GetProperty("tags").EnumerateArray()
+                .Select(t => t.GetString()).OfType<string>().ToArray());
 
         // Unassign with an explicit null.
         var cleared = await _client.PatchAsJsonAsync($"/api/v1/investigations/{id}",

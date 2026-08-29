@@ -245,8 +245,9 @@ public sealed class PlayerService(
         {
             // Resolve the profile icon id against the refreshed catalog so the dossier shows a
             // name; falls back to the raw id when the catalog has not been loaded yet.
-            var iconName = (await catalog.FindAsync(
-                CatalogKinds.ProfileIcon, state.ProfileIconId, cancellationToken))?.Name;
+            var iconName = state.ProfileIconId is { } iconId
+                ? (await catalog.FindAsync(CatalogKinds.ProfileIcon, iconId, cancellationToken))?.Name
+                : null;
             observed = ToObservedDto(state, latest, iconName);
         }
 

@@ -308,7 +308,7 @@ public sealed class WolvesvilleClient(
             ProfileIconId = dto.ProfileIconId,
             EquippedAvatarId = dto.EquippedAvatar?.Id,
             BadgeIds = dto.BadgeIds ?? [],
-            RoleCardIds = dto.RoleCards?.Select(r => r.RoleId1).Where(id => id is not null).ToList() ?? [],
+            RoleCardIds = dto.RoleCards?.Select(r => r.RoleId1).OfType<string>().ToList() ?? [],
             RankedCurrentRating = dto.RankedSeasonSkill,
             Achievements = dto.GameStats?.Achievements?.Count,
             FriendCount = dto.FriendIds?.Count ?? 0,
