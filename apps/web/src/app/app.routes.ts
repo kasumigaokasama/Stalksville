@@ -86,6 +86,12 @@ export const routes: Routes = [
         title: 'Stalksville — Analytics',
       },
       {
+        path: 'scans',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/scans/scans').then((m) => m.Scans),
+        title: 'Stalksville — Scheduled scans',
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings').then((m) => m.Settings),
         title: 'Stalksville — Settings',

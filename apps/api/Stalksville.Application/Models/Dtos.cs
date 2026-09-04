@@ -333,3 +333,56 @@ public sealed record ConnectionStatusDto(
 // ---- Lookup result for search ----
 
 public sealed record PlayerLookupResultDto(PlayerDossierDto Dossier, bool WasReobserved, int ChangesDetectedInThisObservation);
+
+// ---- Scheduled scans & change notifications ----
+
+public sealed record ScanScheduleDto(
+    Guid Id,
+    string Name,
+    string Kind,
+    int IntervalMinutes,
+    int BatchSize,
+    bool Enabled,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    DateTimeOffset? LastRunAt,
+    DateTimeOffset? NextRunAt);
+
+/// <summary>Kind/Interval are required on create; on update, null fields keep their current values.</summary>
+public sealed record UpsertScanScheduleDto(
+    string Name,
+    string? Kind = null,
+    int? IntervalMinutes = null,
+    int? BatchSize = null,
+    bool? Enabled = null);
+
+public sealed record ScanChangeLineDto(string Player, int Changes);
+
+public sealed record ScanRunDto(
+    Guid Id,
+    Guid ScheduleId,
+    string ScheduleName,
+    string Status,
+    DateTimeOffset StartedAt,
+    DateTimeOffset FinishedAt,
+    int PlayersObserved,
+    int ChangesDetected,
+    int AlertsRaised,
+    string? Error,
+    IReadOnlyList<ScanChangeLineDto> Changes);
+
+public sealed record NotificationChannelDto(
+    Guid Id,
+    string Name,
+    string Kind,
+    string TargetUrlMasked,
+    bool Enabled,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? LastDeliveryAt,
+    string? LastDeliveryStatus);
+
+/// <summary>TargetUrl is required on create; on update, null fields keep their current values.</summary>
+public sealed record UpsertNotificationChannelDto(
+    string Name,
+    string? TargetUrl = null,
+    bool? Enabled = null);

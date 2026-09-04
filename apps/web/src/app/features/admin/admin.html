@@ -95,7 +95,7 @@
 
   <section class="stl-card">
     <h2>Create user</h2>
-    <form class="stl-form" (ngSubmit)="createUser()">
+    <form class="stl-form" (submit)="createUser(); $event.preventDefault()">
       <label class="stl-field">
         <span>Username</span>
         <input class="stl-input" type="text" [formField]="createForm.username" />

@@ -1,0 +1,38 @@
+.stl-note {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--stl-border-strong, #2d3550);
+  border-radius: 8px;
+  background: var(--stl-accent-soft, rgba(124, 154, 255, 0.1));
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.schedule-form,
+.channel-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  .stl-field {
+    flex: 1;
+    min-width: 130px;
+  }
+
+  .url-field {
+    flex: 2;
+  }
+}
+
+.run-detail {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

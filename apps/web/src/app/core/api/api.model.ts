@@ -561,3 +561,48 @@ export interface AiNarrative {
   unknown: string[];
   disclaimer: string;
 }
+
+// ---- Scheduled scans & change notifications ----
+
+export interface ScanScheduleDto {
+  id: string;
+  name: string;
+  kind: string;
+  intervalMinutes: number;
+  batchSize: number;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+}
+
+export interface ScanChangeLineDto {
+  player: string;
+  changes: number;
+}
+
+export interface ScanRunDto {
+  id: string;
+  scheduleId: string;
+  scheduleName: string;
+  status: string;
+  startedAt: string;
+  finishedAt: string;
+  playersObserved: number;
+  changesDetected: number;
+  alertsRaised: number;
+  error: string | null;
+  changes: ScanChangeLineDto[];
+}
+
+export interface NotificationChannelDto {
+  id: string;
+  name: string;
+  kind: string;
+  targetUrlMasked: string;
+  enabled: boolean;
+  createdAt: string;
+  lastDeliveryAt: string | null;
+  lastDeliveryStatus: string | null;
+}

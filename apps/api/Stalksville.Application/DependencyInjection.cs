@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<HighscoreService>();
         services.AddScoped<RankedService>();
         services.AddScoped<CatalogService>();
+        services.AddScoped<ScanService>();
         services.AddScoped<Investigations.InvestigationExporter>();
         return services;
     }

@@ -24,6 +24,7 @@ public static class DependencyInjection
     {
         services.Configure<WolvesvilleOptions>(configuration.GetSection(WolvesvilleOptions.SectionName));
         services.Configure<Ai.AiOptions>(configuration.GetSection(Ai.AiOptions.SectionName));
+        services.Configure<Notifications.NotificationsOptions>(configuration.GetSection(Notifications.NotificationsOptions.SectionName));
 
         // Connection string and client mode resolve lazily from the final IConfiguration so
         // integration-test overrides (and env-var swaps) apply regardless of registration order.
@@ -67,12 +68,27 @@ public static class DependencyInjection
         services.AddScoped<ICatalogStore, CatalogStore>();
         services.AddScoped<ISearchStore, SearchStore>();
         services.AddScoped<IApiKeyStore, ApiKeyStore>();
+        services.AddScoped<IScanStore, ScanStore>();
+        services.AddScoped<INotificationStore, NotificationStore>();
         services.AddScoped<Retention.RetentionService>();
         services.AddScoped<Seeding.StalksvilleSeeder>();
 
         RegisterWolvesvilleClient(services, configuration);
+        RegisterWebhookDispatcher(services);
 
         return services;
+    }
+
+    private static void RegisterWebhookDispatcher(IServiceCollection services)
+    {
+        // Notification webhooks go to admin-configured URLs; the dispatcher enforces the same
+        // https-only/non-private host guard as the Wolvesville client before every send.
+        services.AddHttpClient<Notifications.WebhookDispatcher>((sp, client) =>
+        {
+            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Notifications.NotificationsOptions>>().Value;
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(1, opts.TimeoutSeconds));
+        });
+        services.AddScoped<INotificationDispatcher>(sp => sp.GetRequiredService<Notifications.WebhookDispatcher>());
     }
 
     private static void RegisterWolvesvilleClient(IServiceCollection services, IConfiguration configuration)

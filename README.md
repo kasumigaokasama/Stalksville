@@ -53,6 +53,8 @@ dotnet run --project apps/api/Stalksville.Worker
 
 Every 15 minutes (configurable via `Worker:*`) it re-refreshes the least-recently-observed tracked players through the full pipeline — snapshots, change detection and memberships keep accumulating without anyone clicking. It also captures the XP highscore boards and the ranked leaderboard (`Worker:HighscoreCaptureIntervalHours` / `Worker:RankedCaptureIntervalHours`, default 24h each) and refreshes the cosmetics catalogs daily (`Worker:CatalogRefreshIntervalHours`). In mock mode this makes the demo dataset evolve on its own.
 
+A second loop (`Worker:ScanTickSeconds`, default 30s) executes **admin-defined scan schedules** (see the Scans page): recurring player-refresh or board-capture runs whose results land in a run history, with Discord-compatible webhook notifications dispatched only when a run detects changes (`api/v1/scans`, ADMIN).
+
 ## Repository layout
 
 ```
@@ -101,6 +103,7 @@ dotnet user-secrets set "Auth:AdminPassword" "<choose an admin password>"
 | `Wolvesville:Mode` | `Real` | `Real` or `Mock` (demo without an API key) |
 | `Wolvesville:BaseUrl` | `https://api.wolvesville.com` | Upstream API base |
 | `Wolvesville:ApiKey` | — | Bot API key (**backend only**) |
+| `Notifications:TimeoutSeconds` | `10` | Webhook delivery timeout for change notifications |
 | `Auth:AdminPassword` | generated + logged once | Password of the seeded `admin` user |
 
 The Wolvesville API key is used exclusively server-side; it is never exposed to the Angular app.

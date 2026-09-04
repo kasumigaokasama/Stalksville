@@ -51,6 +51,12 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
 
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
 
+    public DbSet<ScanSchedule> ScanSchedules => Set<ScanSchedule>();
+
+    public DbSet<ScanRun> ScanRuns => Set<ScanRun>();
+
+    public DbSet<NotificationChannel> NotificationChannels => Set<NotificationChannel>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -315,6 +321,35 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId);
+        });
+
+        modelBuilder.Entity<ScanSchedule>(e =>
+        {
+            e.ToTable("scan_schedules");
+            e.Property(x => x.Name).HasMaxLength(64);
+            e.Property(x => x.Kind).HasMaxLength(32);
+            e.HasIndex(x => new { x.Enabled, x.NextRunAt });
+        });
+
+        modelBuilder.Entity<ScanRun>(e =>
+        {
+            e.ToTable("scan_runs");
+            e.Property(x => x.ScheduleName).HasMaxLength(64);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.Property(x => x.Error).HasMaxLength(1024);
+            e.Property(x => x.DetailJson).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.ScheduleId, x.StartedAt });
+            e.HasIndex(x => x.StartedAt);
+        });
+
+        modelBuilder.Entity<NotificationChannel>(e =>
+        {
+            e.ToTable("notification_channels");
+            e.Property(x => x.Name).HasMaxLength(64);
+            e.Property(x => x.Kind).HasMaxLength(16);
+            e.Property(x => x.TargetUrl).HasMaxLength(2048);
+            e.Property(x => x.LastDeliveryStatus).HasMaxLength(256);
+            e.HasIndex(x => x.Enabled);
         });
     }
 }

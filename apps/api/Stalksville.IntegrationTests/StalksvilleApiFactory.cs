@@ -33,6 +33,7 @@ public class StalksvilleApiFactory : WebApplicationFactory<Program>
             ["Wolvesville:BaseUrl"] = Mock.BaseUrl,
             ["Wolvesville:ApiKey"] = MockWolvesvilleServer.ApiKey,
             ["Wolvesville:AllowTestHost"] = AllowTestHost ? "true" : "false",
+            ["Notifications:AllowTestHost"] = AllowTestHost ? "true" : "false",
             ["Wolvesville:MaxRequestsPerSecond"] = "1000",
             ["Auth:AdminPassword"] = AdminPassword,
             ["Auth:JwtKey"] = $"integration-test-signing-key-{Guid.NewGuid():N}-with-sufficient-length"

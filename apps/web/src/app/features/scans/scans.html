@@ -1,0 +1,217 @@
+<div class="stl-page">
+  <div class="stl-page-header">
+    <div>
+      <h1>Scheduled scans</h1>
+      <div class="stl-subtitle">
+        Automatic scans on your schedule. When a run detects changes, every enabled webhook channel
+        is notified — silent runs stay silent.
+      </div>
+    </div>
+  </div>
+
+  <section class="stl-card">
+    <h2>Schedules</h2>
+
+    @if (scheduleNote()) {
+      <div class="stl-note">{{ scheduleNote() }}</div>
+    }
+
+    @if (schedulesLoading() && schedules().length === 0) {
+      <div class="stl-empty">Loading schedules…</div>
+    } @else if (schedules().length === 0) {
+      <div class="stl-empty">No schedules yet — create one below.</div>
+    } @else {
+      <table class="stl-table">
+        <thead>
+          <tr><th>Name</th><th>Kind</th><th>Every</th><th>Batch</th><th>Last run</th><th>Next run</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (s of schedules(); track s.id) {
+            <tr>
+              <td>{{ s.name }}</td>
+              <td><span class="stl-tag">{{ kindLabel(s.kind) }}</span></td>
+              <td class="muted">{{ intervalLabel(s.intervalMinutes) }}</td>
+              <td class="muted">{{ s.kind === 'player-refresh' ? s.batchSize : '—' }}</td>
+              <td class="muted" [title]="s.lastRunAt ? formatDateTime(s.lastRunAt) : null">
+                {{ s.lastRunAt ? formatRelative(s.lastRunAt) : 'never' }}
+              </td>
+              <td class="muted" [title]="s.nextRunAt ? formatDateTime(s.nextRunAt) : null">
+                {{ s.enabled && s.nextRunAt ? formatRelative(s.nextRunAt) : 'paused' }}
+              </td>
+              <td>
+                @if (s.enabled) {
+                  <span class="stl-tag stl-tag--success">enabled</span>
+                } @else {
+                  <span class="stl-tag">paused</span>
+                }
+              </td>
+              <td class="row-actions">
+                <button class="stl-button small" type="button" [disabled]="runningId() !== null"
+                        (click)="runNow(s)">
+                  {{ runningId() === s.id ? 'Running…' : 'Run now' }}
+                </button>
+                <button class="stl-button small" type="button" (click)="setEnabled(s, !s.enabled)">
+                  {{ s.enabled ? 'Pause' : 'Resume' }}
+                </button>
+                <button class="stl-button small danger" type="button" (click)="deleteSchedule(s)">Delete</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <h3>New schedule</h3>
+    <form class="stl-form schedule-form" (submit)="createSchedule(); $event.preventDefault()">
+      <label class="stl-field">
+        <span>Name</span>
+        <input class="stl-input" type="text" [formField]="createForm.name" placeholder="Nightly player sweep" />
+      </label>
+      <label class="stl-field">
+        <span>Kind</span>
+        <select class="stl-input" [value]="model().kind" (change)="model.set({ ...model(), kind: $any($event.target).value })">
+          @for (k of kinds; track k.value) {
+            <option [value]="k.value">{{ k.label }}</option>
+          }
+        </select>
+      </label>
+      <label class="stl-field">
+        <span>Interval (minutes)</span>
+        <input class="stl-input" type="number" min="5" max="10080" [value]="model().intervalMinutes"
+               (input)="model.set({ ...model(), intervalMinutes: toNumber($any($event.target).value) })" />
+      </label>
+      <label class="stl-field">
+        <span>Players per run</span>
+        <input class="stl-input" type="number" min="1" max="100" [value]="model().batchSize"
+               (input)="model.set({ ...model(), batchSize: toNumber($any($event.target).value) })" />
+      </label>
+      <button class="stl-button" type="submit" [disabled]="creatingSchedule()">
+        {{ creatingSchedule() ? 'Creating…' : 'Create schedule' }}
+      </button>
+    </form>
+    @if (scheduleError()) {
+      <div class="form-error">{{ scheduleError() }}</div>
+    }
+  </section>
+
+  <section class="stl-card">
+    <h2>Change notifications</h2>
+    <p class="muted">
+      When a scheduled scan detects changes or raises alerts, each enabled channel receives a
+      Discord-compatible JSON webhook (<code>content</code> + <code>embeds</code>). URLs are stored
+      server-side only and shown masked here.
+    </p>
+
+    @if (channelNote()) {
+      <div class="stl-note">{{ channelNote() }}</div>
+    }
+
+    @if (channels().length === 0) {
+      <div class="stl-empty">No channels yet — add a Discord (or generic) webhook URL below.</div>
+    } @else {
+      <table class="stl-table">
+        <thead>
+          <tr><th>Name</th><th>URL</th><th>Status</th><th>Last delivery</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (c of channels(); track c.id) {
+            <tr>
+              <td>{{ c.name }}</td>
+              <td class="mono">{{ c.targetUrlMasked }}</td>
+              <td>
+                @if (c.enabled) {
+                  <span class="stl-tag stl-tag--success">enabled</span>
+                } @else {
+                  <span class="stl-tag">paused</span>
+                }
+              </td>
+              <td class="muted" [title]="c.lastDeliveryAt ? formatDateTime(c.lastDeliveryAt) : null">
+                {{ c.lastDeliveryAt ? `${formatRelative(c.lastDeliveryAt)} · ${c.lastDeliveryStatus ?? ''}` : 'never' }}
+              </td>
+              <td class="row-actions">
+                <button class="stl-button small" type="button" [disabled]="testingId() !== null" (click)="testChannel(c)">
+                  {{ testingId() === c.id ? 'Testing…' : 'Test' }}
+                </button>
+                <button class="stl-button small" type="button" (click)="toggleChannel(c, !c.enabled)">
+                  {{ c.enabled ? 'Pause' : 'Resume' }}
+                </button>
+                <button class="stl-button small danger" type="button" (click)="deleteChannel(c)">Delete</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <h3>New channel</h3>
+    <form class="stl-form channel-form" (submit)="createChannel(); $event.preventDefault()">
+      <label class="stl-field">
+        <span>Name</span>
+        <input class="stl-input" type="text" [formField]="channelForm.name" placeholder="Ops Discord" />
+      </label>
+      <label class="stl-field url-field">
+        <span>Webhook URL (https://)</span>
+        <input class="stl-input mono" type="url" [formField]="channelForm.targetUrl"
+               placeholder="https://discord.com/api/webhooks/…" />
+      </label>
+      <button class="stl-button" type="submit" [disabled]="creatingChannel()">
+        {{ creatingChannel() ? 'Adding…' : 'Add channel' }}
+      </button>
+    </form>
+    @if (channelError()) {
+      <div class="form-error">{{ channelError() }}</div>
+    }
+  </section>
+
+  <section class="stl-card">
+    <h2>Run history</h2>
+
+    @if (runs().length === 0 && !runsLoading()) {
+      <div class="stl-empty">No runs recorded yet.</div>
+    } @else {
+      <table class="stl-table">
+        <thead>
+          <tr><th>When</th><th>Scan</th><th>Status</th><th>Observed</th><th>Changes</th><th>Alerts</th><th>Detail</th></tr>
+        </thead>
+        <tbody>
+          @for (r of runs(); track r.id) {
+            <tr>
+              <td class="muted" [title]="formatDateTime(r.startedAt)">{{ formatRelative(r.startedAt) }}</td>
+              <td>{{ r.scheduleName }}</td>
+              <td>
+                @if (r.status === 'ok') {
+                  <span class="stl-tag stl-tag--success">ok</span>
+                } @else {
+                  <span class="stl-tag stl-tag--danger" [title]="r.error ?? ''">failed</span>
+                }
+              </td>
+              <td class="muted">{{ r.playersObserved }}</td>
+              <td>
+                @if (r.changesDetected > 0) {
+                  <span class="stl-tag stl-tag--derived">{{ r.changesDetected }}</span>
+                } @else {
+                  <span class="muted">0</span>
+                }
+              </td>
+              <td>
+                @if (r.alertsRaised > 0) {
+                  <span class="stl-tag stl-tag--warning">{{ r.alertsRaised }}</span>
+                } @else {
+                  <span class="muted">0</span>
+                }
+              </td>
+              <td class="muted run-detail">
+                {{ r.changes.length > 0 ? r.changes.map(line => `${line.player} (${line.changes})`).join(', ') : (r.error ?? '—') }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (runsHasMore()) {
+        <button class="stl-button small" type="button" [disabled]="runsLoading()" (click)="loadRuns(false)">
+          {{ runsLoading() ? 'Loading…' : 'Load more' }}
+        </button>
+      }
+    }
+  </section>
+</div>

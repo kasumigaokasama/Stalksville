@@ -214,6 +214,25 @@ deep-links to the exact evidence that raised it.
 Charts over your corpus: activity, derived relationship counts, board series, and more —
 all labelled observed vs derived.
 
+### Scheduled scans (Admin)
+
+Automate the scanning itself: define **schedules** that re-observe your corpus on a cadence
+and get **webhook notifications only when something actually changed**.
+
+- **Schedules** — pick a kind (*Player refresh* re-observes the least-recently-seen tracked
+  players, watched ones first; *Highscore capture* stores the XP boards), an interval
+  (5 minutes to a week) and a per-run player batch size. A new schedule is due immediately;
+  then the background worker runs it on its interval. **Run now** executes immediately
+  (manual runs skip the per-player refresh floor), **Pause/Resume** silences a schedule
+  without losing its history, and every run lands in the **Run history** with observed,
+  change and alert counts plus which players changed.
+- **Change notifications** — add webhook channels (Discord webhook URLs work out of the
+  box; the payload is Discord-compatible JSON usable by any receiver). A run that detects
+  changes or raises alerts POSTs a summary to every enabled channel; silent runs send
+  nothing. **Test** verifies delivery, and each channel shows its last delivery outcome.
+  Webhook URLs are credentials — they are stored server-side only and shown masked.
+  Webhooks must be `https://` and cannot target private/loopback hosts.
+
 ### Settings
 
 The Wolvesville **connection report**: mode (Real/Mock), upstream reachability, cache state
@@ -251,6 +270,9 @@ fresh without anyone clicking:
 - **Adaptive refresh** — every 15 minutes (configurable via `Worker:*`) it re-observes the
   least-recently-seen tracked players through the full pipeline. **Watched players are
   refreshed first.**
+- **Scheduled scans** — every 30 seconds (`Worker:ScanTickSeconds`) the worker checks for
+  due admin-defined schedules and executes them; runs with detected changes dispatch the
+  webhook notifications described above.
 - **Board captures** — XP highscores and the ranked leaderboard daily (24 h default); the
   ranked **hall of fame** once per finished season; cosmetics catalogs refreshed daily so
   badge/profile-icon names resolve.

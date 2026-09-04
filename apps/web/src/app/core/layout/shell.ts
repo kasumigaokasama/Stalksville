@@ -39,7 +39,7 @@ export class Shell {
     { path: '/alerts', label: 'Alerts' },
     { path: '/analytics', label: 'Analytics' },
     { path: '/settings', label: 'Settings' },
-    ...(this.auth.canAdmin() ? [{ path: '/admin', label: 'Admin' }] : []),
+    ...(this.auth.canAdmin() ? [{ path: '/scans', label: 'Scans' }, { path: '/admin', label: 'Admin' }] : []),
   ];
 
   protected onKeydown(event: KeyboardEvent): void {
