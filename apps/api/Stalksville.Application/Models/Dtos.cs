@@ -350,6 +350,8 @@ public sealed record ScanScheduleDto(
     int IntervalMinutes,
     int BatchSize,
     bool Enabled,
+    string PlayerScope,
+    IReadOnlyList<string> SelectedPlayers,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     DateTimeOffset? LastRunAt,
@@ -361,7 +363,9 @@ public sealed record UpsertScanScheduleDto(
     string? Kind = null,
     int? IntervalMinutes = null,
     int? BatchSize = null,
-    bool? Enabled = null);
+    bool? Enabled = null,
+    string? PlayerScope = null,
+    IReadOnlyList<Guid>? PlayerIds = null);
 
 public sealed record ScanFieldChangeDto(string Field, string? OldValue, string? NewValue);
 

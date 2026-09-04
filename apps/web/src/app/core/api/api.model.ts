@@ -571,6 +571,8 @@ export interface ScanScheduleDto {
   intervalMinutes: number;
   batchSize: number;
   enabled: boolean;
+  playerScope: string;
+  selectedPlayers: string[];
   createdAt: string;
   updatedAt: string;
   lastRunAt: string | null;

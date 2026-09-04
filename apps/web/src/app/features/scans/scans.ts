@@ -4,10 +4,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { FormField, form, minLength, required, submit } from '@angular/forms/signals';
 
-import { NotificationChannelDto, ScanRunDto, ScanScheduleDto } from '../../core/api/api.model';
+import { NotificationChannelDto, PlayerSummaryDto, ScanRunDto, ScanScheduleDto } from '../../core/api/api.model';
 import { formatDateTime, formatRelative } from '../../shared/util/format';
 
 type ScanKind = 'player-refresh' | 'highscore-capture';
+type PlayerScope = 'all' | 'watched' | 'selected';
 
 /**
  * Scheduled scans + change notifications (ADMIN): recurring scans stored server-side and executed
@@ -33,11 +34,59 @@ export class Scans {
     { value: 'highscore-capture', label: 'Highscore capture' },
   ];
 
+  // ---- player scope + picker ----
+
+  protected readonly scopes: { value: PlayerScope; label: string }[] = [
+    { value: 'all', label: 'All tracked players' },
+    { value: 'watched', label: 'Watched players (any user)' },
+    { value: 'selected', label: 'Selected players…' },
+  ];
+
+  private readonly trackedResource = httpResource<PlayerSummaryDto[]>(() => '/api/v1/players');
+  protected readonly trackedPlayers = computed(() => (this.trackedResource.hasValue() ? this.trackedResource.value() ?? [] : []));
+
+  protected readonly playerFilter = signal('');
+  protected readonly selectedPlayerIds = signal<string[]>([]);
+
+  protected readonly pickerPlayers = computed(() => {
+    const filter = this.playerFilter().trim().toLowerCase();
+    const players = this.trackedPlayers();
+    return (filter ? players.filter((p) => p.username.toLowerCase().includes(filter)) : players).slice(0, 50);
+  });
+
+  protected togglePlayer(id: string): void {
+    const current = this.selectedPlayerIds();
+    this.selectedPlayerIds.set(current.includes(id) ? current.filter((x) => x !== id) : [...current, id]);
+  }
+
+  protected readonly selectedPlayerNames = computed(() => {
+    const byId = new Map(this.trackedPlayers().map((p) => [p.id, p.username]));
+    return this.selectedPlayerIds().map((id) => byId.get(id) ?? id);
+  });
+
+  /** Short label for the schedules table ("All players", "Watched", "flex + 2 more"). */
+  protected scopeLabel(scope: string, names: string[]): string {
+    switch (scope) {
+      case 'watched':
+        return 'Watched';
+      case 'selected':
+        return names.length === 0 ? '—' : names.length <= 2 ? names.join(', ') : `${names.slice(0, 2).join(', ')} +${names.length - 2} more`;
+      default:
+        return 'All players';
+    }
+  }
+
   protected readonly creatingSchedule = signal(false);
   protected readonly scheduleError = signal<string | null>(null);
   protected readonly scheduleNote = signal<string | null>(null);
   protected readonly runningId = signal<string | null>(null);
-  protected readonly model = signal({ name: '', kind: 'player-refresh' as ScanKind, intervalMinutes: 30, batchSize: 10 });
+  protected readonly model = signal({
+    name: '',
+    kind: 'player-refresh' as ScanKind,
+    intervalMinutes: 30,
+    batchSize: 10,
+    playerScope: 'all' as PlayerScope,
+  });
 
   protected readonly createForm = form(this.model, (s) => {
     required(s.name, { message: 'Name is required' });
@@ -46,19 +95,40 @@ export class Scans {
 
   protected createSchedule(): void {
     this.scheduleError.set(null);
+    if (this.model().playerScope === 'selected' && this.selectedPlayerIds().length === 0) {
+      this.scheduleError.set('Pick at least one player for a "Selected players" schedule.');
+      return;
+    }
+
     submit(this.createForm, async () => {
       this.creatingSchedule.set(true);
+      const scope = this.model().playerScope;
+      const picked = [...this.selectedPlayerNames()];
       try {
         await firstValueFrom(this.http.post('/api/v1/scans/schedules', {
           name: this.model().name,
           kind: this.model().kind,
           intervalMinutes: this.model().intervalMinutes,
           batchSize: this.model().batchSize,
+          playerScope: scope,
+          ...(scope === 'selected' ? { playerIds: this.selectedPlayerIds() } : {}),
         }));
-        this.model.set({ name: '', kind: this.model().kind, intervalMinutes: this.model().intervalMinutes, batchSize: this.model().batchSize });
+        this.model.set({
+          name: '',
+          kind: this.model().kind,
+          intervalMinutes: this.model().intervalMinutes,
+          batchSize: this.model().batchSize,
+          playerScope: scope,
+        });
+        this.selectedPlayerIds.set([]);
+        this.playerFilter.set('');
         this.schedulesResource.reload();
         this.loadRuns(true);
-        this.scheduleNote.set('Schedule created — it is due immediately, then runs on its interval.');
+        this.scheduleNote.set(
+          scope === 'selected'
+            ? `Schedule created for ${picked.join(', ')} — due immediately, then runs on its interval.`
+            : 'Schedule created — it is due immediately, then runs on its interval.',
+        );
       } catch (err) {
         this.scheduleError.set(this.detailOf(err) ?? 'Could not create the schedule.');
       } finally {

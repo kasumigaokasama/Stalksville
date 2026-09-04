@@ -219,13 +219,14 @@ all labelled observed vs derived.
 Automate the scanning itself: define **schedules** that re-observe your corpus on a cadence
 and get **webhook notifications only when something actually changed**.
 
-- **Schedules** — pick a kind (*Player refresh* re-observes the least-recently-seen tracked
-  players, watched ones first; *Highscore capture* stores the XP boards), an interval
+- **Schedules** — pick a kind (*Player refresh* re-observes tracked players; *Highscore
+  capture* stores the XP boards), which players to scan (**All tracked players**, only
+  **Watched** players, or a hand-picked **selection** via the player picker), an interval
   (5 minutes to a week) and a per-run player batch size. A new schedule is due immediately;
   then the background worker runs it on its interval. **Run now** executes immediately
   (manual runs skip the per-player refresh floor), **Pause/Resume** silences a schedule
   without losing its history, and every run lands in the **Run history** with observed,
-  change and alert counts plus which players changed.
+  change and alert counts plus which players changed what.
 - **Change notifications** — add webhook channels (Discord webhook URLs work out of the
   box; the payload is Discord-compatible JSON usable by any receiver). A run that detects
   changes or raises alerts POSTs a summary to every enabled channel; silent runs send

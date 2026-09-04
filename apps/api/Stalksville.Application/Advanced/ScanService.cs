@@ -34,6 +34,12 @@ public sealed class ScanService(
     public Task<IReadOnlyList<ScanSchedule>> ListSchedulesAsync(CancellationToken cancellationToken = default) =>
         scans.ListAsync(cancellationToken);
 
+    public Task<IReadOnlyList<ScanScheduleView>> ListSchedulesWithSelectionsAsync(CancellationToken cancellationToken = default) =>
+        scans.ListWithSelectionsAsync(cancellationToken);
+
+    public Task<IReadOnlyList<Guid>> GetSelectedPlayerIdsAsync(Guid scheduleId, CancellationToken cancellationToken = default) =>
+        scans.GetSelectedPlayerIdsAsync(scheduleId, cancellationToken);
+
     public Task<IReadOnlyList<ScanRun>> ListRunsAsync(int limit, int offset, CancellationToken cancellationToken = default) =>
         scans.ListRunsAsync(limit, offset, cancellationToken);
 
@@ -41,7 +47,9 @@ public sealed class ScanService(
     {
         var kind = request.Kind ?? throw new ValidationException("Scan kind is required.");
         var interval = request.IntervalMinutes ?? throw new ValidationException("Interval is required.");
-        ValidateSchedule(request.Name, kind, interval, request.BatchSize);
+        var scope = request.PlayerScope ?? ScanPlayerScopes.All;
+        var playerIds = await ResolveSelectionAsync(scope, request.PlayerIds, requiresSelection: true, cancellationToken);
+        ValidateSchedule(request.Name, kind, interval, request.BatchSize, scope);
 
         var now = DateTimeOffset.UtcNow;
         var schedule = new ScanSchedule
@@ -52,6 +60,7 @@ public sealed class ScanService(
             IntervalMinutes = interval,
             BatchSize = request.BatchSize ?? DefaultBatchSize,
             Enabled = request.Enabled ?? true,
+            PlayerScope = scope,
             CreatedAt = now,
             UpdatedAt = now,
             // A fresh schedule is due immediately — the next worker tick picks it up.
@@ -59,7 +68,13 @@ public sealed class ScanService(
         };
 
         await scans.AddAsync(schedule, cancellationToken);
-        logger.LogInformation("Created scan schedule {Name} ({Kind}, every {Interval}m)", schedule.Name, schedule.Kind, schedule.IntervalMinutes);
+        if (scope == ScanPlayerScopes.Selected && playerIds.Count > 0)
+        {
+            await scans.SetSelectedPlayersAsync(schedule.Id, playerIds, cancellationToken);
+        }
+
+        logger.LogInformation("Created scan schedule {Name} ({Kind}, every {Interval}m, scope {Scope})",
+            schedule.Name, schedule.Kind, schedule.IntervalMinutes, schedule.PlayerScope);
         return schedule;
     }
 
@@ -73,7 +88,21 @@ public sealed class ScanService(
 
         var kind = request.Kind ?? schedule.Kind;
         var interval = request.IntervalMinutes ?? schedule.IntervalMinutes;
-        ValidateSchedule(request.Name, kind, interval, request.BatchSize ?? schedule.BatchSize);
+        var scope = request.PlayerScope ?? schedule.PlayerScope;
+        ValidateSchedule(request.Name, kind, interval, request.BatchSize ?? schedule.BatchSize, scope);
+
+        // A selected scope needs a selection: either the ids sent with this update, the ids
+        // already stored, or (when switching away and back) it must come with ids again.
+        IReadOnlyList<Guid> playerIds;
+        if (request.PlayerIds is not null || scope != ScanPlayerScopes.Selected)
+        {
+            var requiresSelection = request.PlayerIds is not null || scope == ScanPlayerScopes.Selected;
+            playerIds = await ResolveSelectionAsync(scope, request.PlayerIds, requiresSelection, cancellationToken);
+        }
+        else
+        {
+            playerIds = await scans.GetSelectedPlayerIdsAsync(schedule.Id, cancellationToken);
+        }
 
         schedule.Name = request.Name.Trim();
         if (request.Kind is not null && request.Kind != schedule.Kind)
@@ -82,6 +111,8 @@ public sealed class ScanService(
         }
         schedule.IntervalMinutes = request.IntervalMinutes ?? schedule.IntervalMinutes;
         schedule.BatchSize = request.BatchSize ?? schedule.BatchSize;
+        var scopeChanged = scope != schedule.PlayerScope;
+        schedule.PlayerScope = scope;
         var wasEnabled = schedule.Enabled;
         schedule.Enabled = request.Enabled ?? schedule.Enabled;
         schedule.UpdatedAt = DateTimeOffset.UtcNow;
@@ -95,6 +126,11 @@ public sealed class ScanService(
         }
 
         await scans.UpdateAsync(schedule, cancellationToken);
+        if (request.PlayerIds is not null || (scopeChanged && scope != ScanPlayerScopes.Selected))
+        {
+            await scans.SetSelectedPlayersAsync(schedule.Id, playerIds, cancellationToken);
+        }
+
         return schedule;
     }
 
@@ -191,15 +227,35 @@ public sealed class ScanService(
 
     private async Task RunPlayerRefreshAsync(ScanSchedule schedule, ScanRun run, int minPlayerIntervalMinutes, CancellationToken cancellationToken)
     {
-        var recent = await players.GetRecentAsync(1000, cancellationToken);
         var watchedIds = await watch.GetWatchedPlayerIdsAsync(cancellationToken);
 
-        var plan = RefreshScheduler.Plan(
-            recent.Select(p => new RefreshCandidate(p.Id, p.WolvesvillePlayerId, p.Username, p.LastSeenAt)).ToList(),
-            run.StartedAt,
-            schedule.BatchSize,
-            minPlayerIntervalMinutes,
-            watchedIds);
+        // Scope decides the candidate pool; the plan (batch cap, min interval, watched-first)
+        // still applies on top of it.
+        List<RefreshCandidate> candidates;
+        switch (schedule.PlayerScope)
+        {
+            case ScanPlayerScopes.Selected:
+                var selectedIds = await scans.GetSelectedPlayerIdsAsync(schedule.Id, cancellationToken);
+                var selected = await players.GetPlayersByIdsAsync(selectedIds, cancellationToken);
+                candidates = selected.Select(p => new RefreshCandidate(p.Id, p.WolvesvillePlayerId, p.Username, p.LastSeenAt)).ToList();
+                break;
+
+            case ScanPlayerScopes.Watched:
+                var watchedSet = watchedIds.ToHashSet();
+                var recentWatched = await players.GetRecentAsync(1000, cancellationToken);
+                candidates = recentWatched
+                    .Where(p => watchedSet.Contains(p.Id))
+                    .Select(p => new RefreshCandidate(p.Id, p.WolvesvillePlayerId, p.Username, p.LastSeenAt))
+                    .ToList();
+                break;
+
+            default:
+                var recent = await players.GetRecentAsync(1000, cancellationToken);
+                candidates = recent.Select(p => new RefreshCandidate(p.Id, p.WolvesvillePlayerId, p.Username, p.LastSeenAt)).ToList();
+                break;
+        }
+
+        var plan = RefreshScheduler.Plan(candidates, run.StartedAt, schedule.BatchSize, minPlayerIntervalMinutes, watchedIds);
 
         var lines = new List<ScanChangeLine>();
         foreach (var candidate in plan.Selected)
@@ -366,7 +422,38 @@ public sealed class ScanService(
         }
     }
 
-    private static void ValidateSchedule(string name, string kind, int intervalMinutes, int? batchSize)
+    /// <summary>Validates and normalizes a hand-picked selection for the given scope.</summary>
+    private async Task<IReadOnlyList<Guid>> ResolveSelectionAsync(
+        string scope,
+        IReadOnlyList<Guid>? playerIds,
+        bool requiresSelection,
+        CancellationToken cancellationToken)
+    {
+        if (scope != ScanPlayerScopes.Selected)
+        {
+            return [];
+        }
+
+        if (playerIds is null || playerIds.Count == 0)
+        {
+            if (requiresSelection)
+            {
+                throw new ValidationException("A 'selected' schedule needs at least one player.");
+            }
+            return [];
+        }
+
+        var distinct = playerIds.Distinct().ToList();
+        var resolved = await players.GetPlayersByIdsAsync(distinct, cancellationToken);
+        if (resolved.Count != distinct.Count)
+        {
+            throw new ValidationException("Selection contains unknown player id(s).");
+        }
+
+        return distinct;
+    }
+
+    private static void ValidateSchedule(string name, string kind, int intervalMinutes, int? batchSize, string playerScope)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length is < 3 or > 64)
         {
@@ -386,6 +473,11 @@ public sealed class ScanService(
         if (batchSize is < MinimumBatchSize or > MaximumBatchSize)
         {
             throw new ValidationException($"Batch size must be {MinimumBatchSize}–{MaximumBatchSize}.");
+        }
+
+        if (!ScanPlayerScopes.AllScopes.Contains(playerScope))
+        {
+            throw new ValidationException($"Unknown player scope '{playerScope}'.");
         }
     }
 

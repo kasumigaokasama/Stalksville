@@ -23,13 +23,14 @@
     } @else {
       <table class="stl-table">
         <thead>
-          <tr><th>Name</th><th>Kind</th><th>Every</th><th>Batch</th><th>Last run</th><th>Next run</th><th>Status</th><th></th></tr>
+          <tr><th>Name</th><th>Kind</th><th>Players</th><th>Every</th><th>Batch</th><th>Last run</th><th>Next run</th><th>Status</th><th></th></tr>
         </thead>
         <tbody>
           @for (s of schedules(); track s.id) {
             <tr>
               <td>{{ s.name }}</td>
               <td><span class="stl-tag">{{ kindLabel(s.kind) }}</span></td>
+              <td class="muted" [title]="s.selectedPlayers.join(', ')">{{ scopeLabel(s.playerScope, s.selectedPlayers) }}</td>
               <td class="muted">{{ intervalLabel(s.intervalMinutes) }}</td>
               <td class="muted">{{ s.kind === 'player-refresh' ? s.batchSize : '—' }}</td>
               <td class="muted" [title]="s.lastRunAt ? formatDateTime(s.lastRunAt) : null">
@@ -76,6 +77,16 @@
         </select>
       </label>
       <label class="stl-field">
+        <span>Players</span>
+        <select class="stl-input" [value]="model().playerScope"
+                (change)="model.set({ ...model(), playerScope: $any($event.target).value })"
+                [disabled]="model().kind !== 'player-refresh'">
+          @for (sc of scopes; track sc.value) {
+            <option [value]="sc.value">{{ sc.label }}</option>
+          }
+        </select>
+      </label>
+      <label class="stl-field">
         <span>Interval (minutes)</span>
         <input class="stl-input" type="number" min="5" max="10080" [value]="model().intervalMinutes"
                (input)="model.set({ ...model(), intervalMinutes: toNumber($any($event.target).value) })" />
@@ -89,6 +100,32 @@
         {{ creatingSchedule() ? 'Creating…' : 'Create schedule' }}
       </button>
     </form>
+
+    @if (model().kind === 'player-refresh' && model().playerScope === 'selected') {
+      <div class="player-picker stl-field">
+        <span>Pick the players this schedule scans ({{ selectedPlayerIds().length }} selected)</span>
+        <input class="stl-input" type="search" [value]="playerFilter()"
+               (input)="playerFilter.set($any($event.target).value)" placeholder="Filter by username…" />
+        @if (trackedPlayers().length === 0) {
+          <div class="stl-empty">No tracked players yet — import players first.</div>
+        } @else {
+          <div class="picker-list" role="group" aria-label="Players to scan">
+            @for (p of pickerPlayers(); track p.id) {
+              <label class="picker-row">
+                <input type="checkbox" [checked]="selectedPlayerIds().includes(p.id)" (change)="togglePlayer(p.id)" />
+                <span class="mono">{{ p.username }}</span>
+                @if (p.currentClanName; as clan) {
+                  <span class="muted">{{ clan }}</span>
+                }
+              </label>
+            }
+          </div>
+        }
+        @if (selectedPlayerNames().length > 0) {
+          <div class="muted picked-summary">{{ selectedPlayerNames().join(', ') }}</div>
+        }
+      </div>
+    }
     @if (scheduleError()) {
       <div class="form-error">{{ scheduleError() }}</div>
     }

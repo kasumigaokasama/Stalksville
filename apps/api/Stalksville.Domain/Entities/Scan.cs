@@ -18,6 +18,21 @@ public static class ScanRunStatus
     public const string Failed = "failed";
 }
 
+/// <summary>Which players a player-refresh schedule scans.</summary>
+public static class ScanPlayerScopes
+{
+    /// <summary>Every tracked player (least recently seen first) — the default.</summary>
+    public const string All = "all";
+
+    /// <summary>Only players starred on any user's watchlist.</summary>
+    public const string Watched = "watched";
+
+    /// <summary>An explicit hand-picked selection stored per schedule.</summary>
+    public const string Selected = "selected";
+
+    public static readonly IReadOnlyList<string> AllScopes = [All, Watched, Selected];
+}
+
 public static class NotificationChannelKinds
 {
     /// <summary>HTTP POST of a Discord-compatible JSON payload ({content, embeds}).</summary>
@@ -43,6 +58,9 @@ public sealed class ScanSchedule
 
     /// <summary>Upper bound of players observed per PlayerRefresh run (ignored by other kinds).</summary>
     public int BatchSize { get; set; } = 10;
+
+    /// <summary>One of <see cref="ScanPlayerScopes"/> — which players this schedule scans.</summary>
+    public string PlayerScope { get; set; } = ScanPlayerScopes.All;
 
     public bool Enabled { get; set; } = true;
 
@@ -87,6 +105,14 @@ public sealed class ScanRun
 
     /// <summary>Per-player change summary (jsonb) so runs are self-describing without joins.</summary>
     public string? DetailJson { get; set; }
+}
+
+/// <summary>One hand-picked player of a "selected"-scope schedule.</summary>
+public sealed class ScanSchedulePlayer
+{
+    public Guid ScheduleId { get; set; }
+
+    public Guid PlayerId { get; set; }
 }
 
 /// <summary>

@@ -30,6 +30,36 @@
   }
 }
 
+.player-picker {
+  margin-top: 0.75rem;
+  max-width: 26rem;
+
+  .picker-list {
+    margin-top: 0.4rem;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--stl-border, #232837);
+    border-radius: 5px;
+  }
+
+  .picker-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.55rem;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--stl-bg-hover, #171c29);
+    }
+  }
+
+  .picked-summary {
+    margin-top: 0.4rem;
+    font-size: 0.85rem;
+  }
+}
+
 .run-detail {
   max-width: 360px;
   overflow: hidden;

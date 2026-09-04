@@ -16,7 +16,7 @@ namespace Stalksville.Api.Controllers;
 [ApiController]
 [Authorize(Policy = Policies.Admin)]
 [Route("api/v1/scans")]
-public sealed class ScansController(ScanService scans) : ControllerBase
+public sealed class ScansController(ScanService scans, IPlayerStore players) : ControllerBase
 {
     // ---- schedules ----
 
@@ -24,8 +24,9 @@ public sealed class ScansController(ScanService scans) : ControllerBase
     [ProducesResponseType<IReadOnlyList<ScanScheduleDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ListSchedules(CancellationToken cancellationToken)
     {
-        var schedules = await scans.ListSchedulesAsync(cancellationToken);
-        return Ok(schedules.Select(ToDto).ToList());
+        var views = await scans.ListSchedulesWithSelectionsAsync(cancellationToken);
+        var names = await ResolveNamesAsync(views.SelectMany(v => v.SelectedPlayerIds).Distinct(), cancellationToken);
+        return Ok(views.Select(v => ToDto(v, names)).ToList());
     }
 
     [HttpPost("schedules")]
@@ -33,7 +34,10 @@ public sealed class ScansController(ScanService scans) : ControllerBase
     public async Task<IActionResult> CreateSchedule(UpsertScanScheduleDto request, CancellationToken cancellationToken)
     {
         var schedule = await scans.CreateScheduleAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(ListSchedules), new { id = schedule.Id }, ToDto(schedule));
+        var selection = await scans.ListSchedulesWithSelectionsAsync(cancellationToken);
+        var view = selection.FirstOrDefault(v => v.Schedule.Id == schedule.Id) ?? new(schedule, []);
+        var names = await ResolveNamesAsync(view.SelectedPlayerIds, cancellationToken);
+        return CreatedAtAction(nameof(ListSchedules), new { id = schedule.Id }, ToDto(view, names));
     }
 
     [HttpPatch("schedules/{id:guid}")]
@@ -42,7 +46,14 @@ public sealed class ScansController(ScanService scans) : ControllerBase
     public async Task<IActionResult> UpdateSchedule(Guid id, UpsertScanScheduleDto request, CancellationToken cancellationToken)
     {
         var schedule = await scans.UpdateScheduleAsync(id, request, cancellationToken);
-        return schedule is null ? NotFound() : Ok(ToDto(schedule));
+        if (schedule is null)
+        {
+            return NotFound();
+        }
+
+        var selectedIds = await scans.GetSelectedPlayerIdsAsync(id, cancellationToken);
+        var names = await ResolveNamesAsync(selectedIds, cancellationToken);
+        return Ok(ToDto(new ScanScheduleView(schedule, selectedIds), names));
     }
 
     [HttpDelete("schedules/{id:guid}")]
@@ -117,8 +128,31 @@ public sealed class ScansController(ScanService scans) : ControllerBase
             : Ok(new { success = result.Value.Success, detail = result.Value.Detail });
     }
 
-    private static ScanScheduleDto ToDto(ScanSchedule s) => new(
-        s.Id, s.Name, s.Kind, s.IntervalMinutes, s.BatchSize, s.Enabled, s.CreatedAt, s.UpdatedAt, s.LastRunAt, s.NextRunAt);
+    private async Task<IReadOnlyDictionary<Guid, string>> ResolveNamesAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken)
+    {
+        var list = ids as IReadOnlyList<Guid> ?? ids.ToList();
+        if (list.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var found = await players.GetPlayersByIdsAsync(list, cancellationToken);
+        return found.ToDictionary(p => p.Id, p => p.Username);
+    }
+
+    private static ScanScheduleDto ToDto(ScanScheduleView view, IReadOnlyDictionary<Guid, string> names) => new(
+        view.Schedule.Id,
+        view.Schedule.Name,
+        view.Schedule.Kind,
+        view.Schedule.IntervalMinutes,
+        view.Schedule.BatchSize,
+        view.Schedule.Enabled,
+        view.Schedule.PlayerScope,
+        view.SelectedPlayerIds.Select(id => names.TryGetValue(id, out var username) ? username : id.ToString()).ToList(),
+        view.Schedule.CreatedAt,
+        view.Schedule.UpdatedAt,
+        view.Schedule.LastRunAt,
+        view.Schedule.NextRunAt);
 
     private static ScanRunDto ToDto(ScanRun r) => new(
         r.Id, r.ScheduleId, r.ScheduleName, r.Status, r.StartedAt, r.FinishedAt,

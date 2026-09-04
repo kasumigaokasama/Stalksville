@@ -37,6 +37,7 @@ public sealed class ScanStore(StalksvilleDbContext db) : IScanStore
                 .SetProperty(s => s.IntervalMinutes, schedule.IntervalMinutes)
                 .SetProperty(s => s.BatchSize, schedule.BatchSize)
                 .SetProperty(s => s.Enabled, schedule.Enabled)
+                .SetProperty(s => s.PlayerScope, schedule.PlayerScope)
                 .SetProperty(s => s.UpdatedAt, schedule.UpdatedAt)
                 .SetProperty(s => s.LastRunAt, schedule.LastRunAt)
                 .SetProperty(s => s.NextRunAt, schedule.NextRunAt), cancellationToken);
@@ -65,4 +66,33 @@ public sealed class ScanStore(StalksvilleDbContext db) : IScanStore
             .Skip(offset)
             .Take(limit)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ScanScheduleView>> ListWithSelectionsAsync(CancellationToken cancellationToken = default)
+    {
+        var schedules = await db.ScanSchedules.AsNoTracking()
+            .OrderBy(s => s.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var selections = await db.ScanSchedulePlayers.AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return schedules
+            .Select(s => new ScanScheduleView(s, selections.Where(sp => sp.ScheduleId == s.Id).Select(sp => sp.PlayerId).ToList()))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetSelectedPlayerIdsAsync(Guid scheduleId, CancellationToken cancellationToken = default)
+        => await db.ScanSchedulePlayers.AsNoTracking()
+            .Where(sp => sp.ScheduleId == scheduleId)
+            .Select(sp => sp.PlayerId)
+            .ToListAsync(cancellationToken);
+
+    public async Task SetSelectedPlayersAsync(Guid scheduleId, IReadOnlyList<Guid> playerIds, CancellationToken cancellationToken = default)
+    {
+        await db.ScanSchedulePlayers
+            .Where(sp => sp.ScheduleId == scheduleId)
+            .ExecuteDeleteAsync(cancellationToken);
+        db.ScanSchedulePlayers.AddRange(playerIds.Select(id => new ScanSchedulePlayer { ScheduleId = scheduleId, PlayerId = id }));
+        await db.SaveChangesAsync(cancellationToken);
+    }
 }

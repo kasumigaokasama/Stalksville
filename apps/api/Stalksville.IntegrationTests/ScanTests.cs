@@ -157,6 +157,80 @@ public sealed class ScanTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SelectedScope_ScansOnlyThePickedPlayers()
+    {
+        Guid? flexId = null;
+        foreach (var username in new[] { "flex", "talon" })
+        {
+            var lookup = await _client.GetAsync($"/api/v1/players/lookup?username={username}");
+            lookup.EnsureSuccessStatusCode();
+            if (username == "flex")
+            {
+                flexId = JsonDocument.Parse(await lookup.Content.ReadAsStreamAsync())
+                    .RootElement.GetProperty("dossier").GetProperty("player").GetProperty("id").GetGuid();
+            }
+        }
+
+        // A selected scope without ids, or with unknown ids, is rejected.
+        var noIds = await _client.PostAsJsonAsync("/api/v1/scans/schedules",
+            new { name = "Empty pick", kind = "player-refresh", intervalMinutes = 5, playerScope = "selected" });
+        Assert.Equal(HttpStatusCode.BadRequest, noIds.StatusCode);
+        var unknownIds = await _client.PostAsJsonAsync("/api/v1/scans/schedules",
+            new { name = "Ghost pick", kind = "player-refresh", intervalMinutes = 5, playerScope = "selected", playerIds = new[] { Guid.NewGuid() } });
+        Assert.Equal(HttpStatusCode.BadRequest, unknownIds.StatusCode);
+
+        // Only flex is selected: a manual run must observe exactly one player even though
+        // talon is equally tracked and fresh (manual runs bypass the refresh floor).
+        var create = await _client.PostAsJsonAsync("/api/v1/scans/schedules",
+            new { name = "Flex only", kind = "player-refresh", intervalMinutes = 5, playerScope = "selected", playerIds = new[] { flexId } });
+        create.EnsureSuccessStatusCode();
+        var created = JsonDocument.Parse(await create.Content.ReadAsStreamAsync()).RootElement;
+        Assert.Equal("selected", created.GetProperty("playerScope").GetString());
+        var picked = Assert.Single(created.GetProperty("selectedPlayers").EnumerateArray());
+        Assert.Equal("flex", picked.GetString());
+
+        var scheduleId = created.GetProperty("id").GetGuid();
+        var run = await _client.PostAsync($"/api/v1/scans/schedules/{scheduleId}/run", content: null);
+        run.EnsureSuccessStatusCode();
+        var runBody = JsonDocument.Parse(await run.Content.ReadAsStreamAsync()).RootElement;
+        Assert.Equal(1, runBody.GetProperty("playersObserved").GetInt32());
+
+        var list = await GetJsonAsync("/api/v1/scans/schedules");
+        var stored = list.EnumerateArray().Single(s => s.GetProperty("id").GetGuid() == scheduleId);
+        Assert.Equal("flex", Assert.Single(stored.GetProperty("selectedPlayers").EnumerateArray()).GetString());
+    }
+
+    [Fact]
+    public async Task WatchedScope_ScansOnlyStarredPlayers()
+    {
+        Guid? talonId = null;
+        foreach (var username in new[] { "flex", "talon" })
+        {
+            var lookup = await _client.GetAsync($"/api/v1/players/lookup?username={username}");
+            lookup.EnsureSuccessStatusCode();
+            if (username == "talon")
+            {
+                talonId = JsonDocument.Parse(await lookup.Content.ReadAsStreamAsync())
+                    .RootElement.GetProperty("dossier").GetProperty("player").GetProperty("id").GetGuid();
+            }
+        }
+
+        // Star talon: the watched scope must scan talon and skip the unstarred flex.
+        var star = await _client.PostAsync($"/api/v1/players/{talonId}/watch", content: null);
+        Assert.Equal(HttpStatusCode.NoContent, star.StatusCode);
+
+        var create = await _client.PostAsJsonAsync("/api/v1/scans/schedules",
+            new { name = "Stars only", kind = "player-refresh", intervalMinutes = 5, playerScope = "watched" });
+        create.EnsureSuccessStatusCode();
+        var scheduleId = JsonDocument.Parse(await create.Content.ReadAsStreamAsync()).RootElement.GetProperty("id").GetGuid();
+
+        var run = await _client.PostAsync($"/api/v1/scans/schedules/{scheduleId}/run", content: null);
+        run.EnsureSuccessStatusCode();
+        var runBody = JsonDocument.Parse(await run.Content.ReadAsStreamAsync()).RootElement;
+        Assert.Equal(1, runBody.GetProperty("playersObserved").GetInt32());
+    }
+
+    [Fact]
     public async Task TestChannelEndpoint_DeliversFixedPayload()
     {
         await using var receiver = await WebhookReceiver.StartAsync();

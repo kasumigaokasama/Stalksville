@@ -53,6 +53,8 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
 
     public DbSet<ScanSchedule> ScanSchedules => Set<ScanSchedule>();
 
+    public DbSet<ScanSchedulePlayer> ScanSchedulePlayers => Set<ScanSchedulePlayer>();
+
     public DbSet<ScanRun> ScanRuns => Set<ScanRun>();
 
     public DbSet<NotificationChannel> NotificationChannels => Set<NotificationChannel>();
@@ -328,7 +330,23 @@ public sealed class StalksvilleDbContext(DbContextOptions<StalksvilleDbContext> 
             e.ToTable("scan_schedules");
             e.Property(x => x.Name).HasMaxLength(64);
             e.Property(x => x.Kind).HasMaxLength(32);
+            e.Property(x => x.PlayerScope).HasMaxLength(16).HasDefaultValue(ScanPlayerScopes.All);
             e.HasIndex(x => new { x.Enabled, x.NextRunAt });
+        });
+
+        modelBuilder.Entity<ScanSchedulePlayer>(e =>
+        {
+            e.ToTable("scan_schedule_players");
+            e.HasKey(x => new { x.ScheduleId, x.PlayerId });
+            e.HasIndex(x => x.PlayerId);
+            e.HasOne<ScanSchedule>()
+                .WithMany()
+                .HasForeignKey(x => x.ScheduleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Player>()
+                .WithMany()
+                .HasForeignKey(x => x.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ScanRun>(e =>
