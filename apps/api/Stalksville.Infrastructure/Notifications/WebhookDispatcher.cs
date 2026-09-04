@@ -70,6 +70,8 @@ public sealed class WebhookDispatcher(
     /// <summary>Discord webhook shape: short content line plus one embed with the run summary.</summary>
     private static object BuildPayload(ScanNotification n) => new
     {
+        username = "Stalksville",
+        allowed_mentions = new { parse = Array.Empty<string>() },
         content = n.IsTest
             ? $"✅ Stalksville test notification for channel \"{n.ScheduleName}\" — deliveries are working."
             : $"🔎 Stalksville scan \"{n.ScheduleName}\" detected {n.ChangesDetected} change(s)",
@@ -85,11 +87,26 @@ public sealed class WebhookDispatcher(
                 fields = n.Changes.Take(20).Select(line => new
                 {
                     name = line.Player,
-                    value = $"{line.Changes} change(s)",
-                    @inline = true,
+                    value = DescribeFields(line),
+                    @inline = false,
                 }).ToArray(),
                 timestamp = n.FinishedAt.ToString("O"),
             },
         },
     };
+
+    /// <summary>"level: 42 → 55" lines — the "which player changed what" the notification answers.</summary>
+    private static string DescribeFields(ScanChangeLine line)
+    {
+        var fields = line.Fields ?? [];
+        if (fields.Count == 0)
+        {
+            return $"{line.Changes} change(s)";
+        }
+
+        var text = string.Join("\n", fields.Select(f => $"{f.Field}: {DescribeValue(f.OldValue)} → {DescribeValue(f.NewValue)}"));
+        return text.Length > 1000 ? text[..997] + "…" : text;
+    }
+
+    private static string DescribeValue(string? value) => string.IsNullOrEmpty(value) ? "none" : value;
 }

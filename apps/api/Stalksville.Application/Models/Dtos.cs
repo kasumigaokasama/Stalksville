@@ -332,7 +332,14 @@ public sealed record ConnectionStatusDto(
 
 // ---- Lookup result for search ----
 
-public sealed record PlayerLookupResultDto(PlayerDossierDto Dossier, bool WasReobserved, int ChangesDetectedInThisObservation);
+/// <summary>One field-level change observed during a single player observation.</summary>
+public sealed record ObservedChangeDto(string Field, string? OldValue, string? NewValue);
+
+public sealed record PlayerLookupResultDto(
+    PlayerDossierDto Dossier,
+    bool WasReobserved,
+    int ChangesDetectedInThisObservation,
+    IReadOnlyList<ObservedChangeDto>? ChangesInThisObservation = null);
 
 // ---- Scheduled scans & change notifications ----
 
@@ -356,7 +363,12 @@ public sealed record UpsertScanScheduleDto(
     int? BatchSize = null,
     bool? Enabled = null);
 
-public sealed record ScanChangeLineDto(string Player, int Changes);
+public sealed record ScanFieldChangeDto(string Field, string? OldValue, string? NewValue);
+
+public sealed record ScanChangeLineDto(
+    string Player,
+    int Changes,
+    IReadOnlyList<ScanFieldChangeDto> Fields);
 
 public sealed record ScanRunDto(
     Guid Id,

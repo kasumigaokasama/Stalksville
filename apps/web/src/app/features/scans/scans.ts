@@ -226,6 +226,15 @@ export class Scans {
     return Number(value);
   }
 
+  /** "flex: level 42 → 55 · clan 2001 → none" — the who-changed-what summary for run rows. */
+  protected changeDetail(line: { player: string; changes: number; fields: { field: string; oldValue: string | null; newValue: string | null }[] }): string {
+    if (line.fields.length > 0) {
+      const parts = line.fields.map((f) => `${f.field} ${f.oldValue ?? 'none'} → ${f.newValue ?? 'none'}`);
+      return `${line.player}: ${parts.join(', ')}`;
+    }
+    return `${line.player} (${line.changes} change${line.changes === 1 ? '' : 's'})`;
+  }
+
   protected readonly formatDateTime = formatDateTime;
   protected readonly formatRelative = formatRelative;
 

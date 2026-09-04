@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stalksville.Api.Security;
+using Stalksville.Application.Abstractions;
 using Stalksville.Application.Advanced;
 using Stalksville.Application.Models;
 using Stalksville.Domain.Entities;
@@ -122,7 +123,12 @@ public sealed class ScansController(ScanService scans) : ControllerBase
     private static ScanRunDto ToDto(ScanRun r) => new(
         r.Id, r.ScheduleId, r.ScheduleName, r.Status, r.StartedAt, r.FinishedAt,
         r.PlayersObserved, r.ChangesDetected, r.AlertsRaised, r.Error,
-        ScanService.DeserializeLines(r.DetailJson).Select(l => new ScanChangeLineDto(l.Player, l.Changes)).ToList());
+        ScanService.DeserializeLines(r.DetailJson).Select(ToDto).ToList());
+
+    private static ScanChangeLineDto ToDto(ScanChangeLine line) => new(
+        line.Player,
+        line.Changes,
+        (line.Fields ?? []).Select(f => new ScanFieldChangeDto(f.Field, f.OldValue, f.NewValue)).ToList());
 
     /// <summary>Webhook URLs embed secrets (Discord tokens) — show scheme/host and a path hint only.</summary>
     private static NotificationChannelDto ToDto(NotificationChannel c) => new(

@@ -231,7 +231,11 @@ public sealed class PlayerService(
             state.WolvesvillePlayerId, reobserved, changeEntities.Count, snapshot.Id);
 
         var dossier = await GetDossierAsync(player.Id, cancellationToken);
-        return new PlayerLookupResultDto(dossier, reobserved, changeEntities.Count);
+        return new PlayerLookupResultDto(
+            dossier,
+            reobserved,
+            changeEntities.Count,
+            changeEntities.Select(c => new ObservedChangeDto(c.Field, c.OldValue, c.NewValue)).ToList());
     }
 
     public async Task<PlayerDossierDto> GetDossierAsync(Guid playerId, CancellationToken cancellationToken = default)

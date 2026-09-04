@@ -577,9 +577,16 @@ export interface ScanScheduleDto {
   nextRunAt: string | null;
 }
 
+export interface ScanFieldChangeDto {
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
 export interface ScanChangeLineDto {
   player: string;
   changes: number;
+  fields: ScanFieldChangeDto[];
 }
 
 export interface ScanRunDto {

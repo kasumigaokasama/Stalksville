@@ -201,7 +201,7 @@
                 }
               </td>
               <td class="muted run-detail">
-                {{ r.changes.length > 0 ? r.changes.map(line => `${line.player} (${line.changes})`).join(', ') : (r.error ?? '—') }}
+                {{ r.changes.length > 0 ? r.changes.map(line => changeDetail(line)).join(' · ') : (r.error ?? '—') }}
               </td>
             </tr>
           }

@@ -2,8 +2,14 @@ using Stalksville.Domain.Entities;
 
 namespace Stalksville.Application.Abstractions;
 
-/// <summary>One player-level change line inside a scan notification.</summary>
-public sealed record ScanChangeLine(string Player, int Changes);
+/// <summary>One field-level change inside a scan change line.</summary>
+public sealed record ScanFieldChange(string Field, string? OldValue, string? NewValue);
+
+/// <summary>One player's changes in a scan run — with what actually moved.</summary>
+public sealed record ScanChangeLine(
+    string Player,
+    int Changes,
+    IReadOnlyList<ScanFieldChange>? Fields = null);
 
 /// <summary>What a scan found — the payload notifications are built from.</summary>
 public sealed record ScanNotification(

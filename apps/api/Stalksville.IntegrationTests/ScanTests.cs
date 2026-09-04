@@ -132,11 +132,17 @@ public sealed class ScanTests : IAsyncLifetime
         Assert.True(runBody.GetProperty("changesDetected").GetInt32() >= 1);
         var line = Assert.Single(runBody.GetProperty("changes").EnumerateArray());
         Assert.Equal("flex", line.GetProperty("player").GetString());
+        // The "what changed" travels with the run: field + old → new.
+        var field = Assert.Single(line.GetProperty("fields").EnumerateArray());
+        Assert.Equal("level", field.GetProperty("field").GetString());
+        Assert.Equal("42", field.GetProperty("oldValue").GetString());
+        Assert.Equal("55", field.GetProperty("newValue").GetString());
 
         var payload = await receiver.NextAsync();
         Assert.Contains("Change watcher", payload.GetProperty("content").GetString());
-        var field = Assert.Single(payload.GetProperty("embeds")[0].GetProperty("fields").EnumerateArray());
-        Assert.Equal("flex", field.GetProperty("name").GetString());
+        var embedField = Assert.Single(payload.GetProperty("embeds")[0].GetProperty("fields").EnumerateArray());
+        Assert.Equal("flex", embedField.GetProperty("name").GetString());
+        Assert.Contains("level: 42 → 55", embedField.GetProperty("value").GetString());
 
         // Run history reflects both runs, newest first.
         var runs = await GetJsonAsync("/api/v1/scans/runs");

@@ -211,7 +211,12 @@ public sealed class ScanService(
                 run.ChangesDetected += result.ChangesDetectedInThisObservation;
                 if (result.ChangesDetectedInThisObservation > 0)
                 {
-                    lines.Add(new ScanChangeLine(candidate.Username, result.ChangesDetectedInThisObservation));
+                    // The "what changed" travels with the run: field, old → new, per player.
+                    var fields = (result.ChangesInThisObservation ?? [])
+                        .Take(10)
+                        .Select(c => new ScanFieldChange(c.Field, Truncate(c.OldValue), Truncate(c.NewValue)))
+                        .ToList();
+                    lines.Add(new ScanChangeLine(candidate.Username, result.ChangesDetectedInThisObservation, fields));
                 }
             }
             catch (Exception ex)
@@ -341,8 +346,11 @@ public sealed class ScanService(
     public Task<IReadOnlyList<NotificationChannel>> ListChannelsAsync(CancellationToken cancellationToken = default) =>
         notifications.ListAsync(enabledOnly: false, cancellationToken);
 
-    public static IReadOnlyList<ScanChangeLine> DeserializeLines(string? detailJson)
-    {
+    /// <summary>Change values can be long (badge lists) — cap them so run details stay readable.</summary>
+    private static string? Truncate(string? value) =>
+        value is null || value.Length <= 80 ? value : value[..77] + "…";
+
+    public static IReadOnlyList<ScanChangeLine> DeserializeLines(string? detailJson)    {
         if (string.IsNullOrEmpty(detailJson))
         {
             return [];
