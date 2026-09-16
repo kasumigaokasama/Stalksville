@@ -11,6 +11,7 @@ services:
   postgres:
     image: postgres:18-alpine
     container_name: stalksville-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: stalksville
       POSTGRES_PASSWORD: stalksville
@@ -30,6 +31,7 @@ services:
       context: apps/api
       dockerfile: Stalksville.Api/Dockerfile
     profiles: ["app"]
+    restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=stalksville;Username=stalksville;Password=stalksville
@@ -59,6 +61,7 @@ services:
       context: apps/api
       dockerfile: Stalksville.Worker/Dockerfile
     profiles: ["app"]
+    restart: unless-stopped
     environment:
       DOTNET_ENVIRONMENT: Production
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=stalksville;Username=stalksville;Password=stalksville
@@ -78,6 +81,7 @@ services:
   redis:
     image: redis:8-alpine
     profiles: ["app"]
+    restart: unless-stopped
     command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -89,6 +93,7 @@ services:
     build:
       context: apps/web
     profiles: ["app"]
+    restart: unless-stopped
     ports:
       - "4200:80"
     depends_on:
